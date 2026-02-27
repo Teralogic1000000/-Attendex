@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id            String   @id @default(uuid())
+  name          String
+  email         String?
+  phone         String?
+  createdAt     DateTime @default(now())
+  users         User[]
+  subscriptions OrganizationSubscription[]
+}
+
+model Role {
+  id    String @id @default(uuid())
+  name  String @unique
+  users User[]
+}
+
+model User {
+  id          String   @id @default(uuid())
+  firstName   String
+  lastName    String
+  email       String   @unique
+  password    String
+  orgId       String
+  roleId      String
+  createdAt   DateTime @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  role         Role         @relation(fields: [roleId], references: [id])
+  attendance   Attendance[]
+}
+
+model Attendance {
+  id         String   @id @default(uuid())
+  userId     String
+  orgId      String
+  checkIn    DateTime?
+  checkOut   DateTime?
+  latitude   Float?
+  longitude  Float?
+  createdAt  DateTime @default(now())
+
+  user       User @relation(fields: [userId], references: [id])
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(uuid())
+  name        String
+  maxUsers    Int
+  maxDevices  Int
+  price       Float
+  duration    Int
+  createdAt   DateTime @default(now())
+
+  subscriptions OrganizationSubscription[]
+}
+
+model OrganizationSubscription {
+  id        String   @id @default(uuid())
+  orgId     String
+  planId    String
+  startDate DateTime
+  endDate   DateTime
+  status    String
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  plan         SubscriptionPlan @relation(fields: [planId], references: [id])
+}

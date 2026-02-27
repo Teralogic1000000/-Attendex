@@ -1,0 +1,19 @@
+node_modules
+# Keep environment variables out of version control
+.env
+
+/generated/prisma
+/node_modules
+/dist
+/build
+/.next
+/out
+/.vercel
+/.vercelignore
+/.env.local
+/.env.development
+/.env.test
+/.env.production
+/package-lock.json
+/yarn.lock
+/package.json
