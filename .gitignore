@@ -43,3 +43,5 @@ coverage/
 # Local files
 *.bak
 *.tmp
+# Markdown files
+*.md
