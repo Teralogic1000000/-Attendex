@@ -1,20 +1,16 @@
-
 import morgan from 'morgan';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 dotenv.config();
-import errorHandler from './src/middleware/errorMiddleware.js';
-
-
-import app from './Backed/src/app.js';
+import errorHandler from './src/Middleware/errorMiddleware.js';
+import app from './src/app.js';
 
 const PORT = process.env.PORT || 3000;
-app.use(morgan('dev'));
 
+// Middleware
+app.use(morgan('dev'));
 app.use(helmet());
-app.use(errorHandler);
-app.use(limiter);
 
 // Rate limiting
 const limiter = rateLimit({
@@ -22,6 +18,10 @@ const limiter = rateLimit({
   max: 100
 });
 
+app.use(limiter);
+app.use(errorHandler);
+
+// Start server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

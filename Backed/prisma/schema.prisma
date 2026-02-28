@@ -14,7 +14,8 @@ model Organization {
   phone         String?
   createdAt     DateTime @default(now())
   users         User[]
-  subscriptions OrganizationSubscription[]
+  attendances   Attendance[]
+  subscription  OrganizationSubscription?
 }
 
 model Role {
@@ -24,40 +25,43 @@ model Role {
 }
 
 model User {
-  id          String   @id @default(uuid())
-  firstName   String
-  lastName    String
-  email       String   @unique
-  password    String
-  orgId       String
-  roleId      String
-  createdAt   DateTime @default(now())
+  id           String   @id @default(uuid())
+  firstName    String
+  lastName     String
+  email        String   @unique
+  password     String
+  orgId        String
+  roleId       String
+  refreshToken String?
+  createdAt    DateTime @default(now())
 
-  organization Organization @relation(fields: [orgId], references: [id])
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   role         Role         @relation(fields: [roleId], references: [id])
   attendance   Attendance[]
 }
 
 model Attendance {
   id         String   @id @default(uuid())
-  userId     String
-  orgId      String
+  date       DateTime
   checkIn    DateTime?
   checkOut   DateTime?
-  latitude   Float?
-  longitude  Float?
-  createdAt  DateTime @default(now())
+  totalHours Float?
+  userId     String
+  orgId      String
 
-  user       User @relation(fields: [userId], references: [id])
+  user User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
 }
 
 model SubscriptionPlan {
   id          String   @id @default(uuid())
-  name        String
+  name        String   @unique
   maxUsers    Int
-  maxDevices  Int
   price       Float
   duration    Int
+  features    String[] // JSON array of features
   createdAt   DateTime @default(now())
 
   subscriptions OrganizationSubscription[]
@@ -65,12 +69,12 @@ model SubscriptionPlan {
 
 model OrganizationSubscription {
   id        String   @id @default(uuid())
-  orgId     String
+  orgId     String   @unique
   planId    String
-  startDate DateTime
+  startDate DateTime @default(now())
   endDate   DateTime
-  status    String
+  status    String   @default("ACTIVE")
 
-  organization Organization @relation(fields: [orgId], references: [id])
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   plan         SubscriptionPlan @relation(fields: [planId], references: [id])
 }

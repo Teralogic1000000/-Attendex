@@ -1,15 +1,13 @@
 import jwt from 'jsonwebtoken';
 
-function generateToken(user) {
+export default function generateToken(user) {
   return jwt.sign(
     {
       id: user.id,
       orgId: user.orgId,
-      roleId: user.roleId
+      roleName: user.role.name
     },
     process.env.JWT_SECRET,
-    { expiresIn: '1d' }
+    { expiresIn: "7d" }
   );
 }
-
-export default generateToken;

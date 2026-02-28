@@ -16,4 +16,3 @@ node_modules
 /.env.production
 /package-lock.json
 /yarn.lock
-/package.json

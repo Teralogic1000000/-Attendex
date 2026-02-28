@@ -1,68 +1,235 @@
-// Backed/src/controllers/authController.js
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
-import generateToken from '../utils/generateToken.js';
+import prisma from '../config/prisma.js';
+import jwt from 'jsonwebtoken';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { successResponse, errorResponse } from '../utils/response.js';
+import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
+import { SUBSCRIPTION_STATUS } from '../constants/subscriptionPlans.js';
 
-const prisma = new PrismaClient();
+/**
+ * Register a new organization with user and default Basic subscription
+ */
+export const register = asyncHandler(async (req, res) => {
+  const { firstName, lastName, email, password, orgName } = req.body;
 
-// ✅ Named export for register
-export const register = async (req, res) => {
+  // Validate required fields
+  if (!firstName || !lastName || !email || !password || !orgName) {
+    return errorResponse(res, 'All fields are required', 400);
+  }
+
+  // Check if email already exists
+  const existingUser = await prisma.user.findUnique({
+    where: { email }
+  });
+
+  if (existingUser) {
+    return errorResponse(res, 'Email already in use', 400);
+  }
+
+  // Hash password
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  // Create organization
+  const organization = await prisma.organization.create({
+    data: { name: orgName }
+  });
+
+  // Get or create OrgAdmin role
+  let role = await prisma.role.findUnique({
+    where: { name: 'OrgAdmin' }
+  });
+
+  if (!role) {
+    role = await prisma.role.create({
+      data: { name: 'OrgAdmin' }
+    });
+  }
+
+  // Create user
+  const user = await prisma.user.create({
+    data: {
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      orgId: organization.id,
+      roleId: role.id
+    },
+    include: { role: true, organization: true }
+  });
+
+  // Get Basic plan
+  const basicPlan = await prisma.subscriptionPlan.findUnique({
+    where: { name: 'Basic' }
+  });
+
+  // Create subscription with Basic plan
+  const endDate = new Date();
+  endDate.setDate(endDate.getDate() + 30); // 30 days trial
+
+  const subscription = await prisma.organizationSubscription.create({
+    data: {
+      orgId: organization.id,
+      planId: basicPlan.id,
+      startDate: new Date(),
+      endDate,
+      status: SUBSCRIPTION_STATUS.ACTIVE
+    },
+    include: { plan: true }
+  });
+
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+
+  // Store refresh token
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { refreshToken }
+  });
+
+  return successResponse(res, 'Registration successful', {
+    user: {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role.name,
+      orgId: organization.id
+    },
+    subscription: {
+      plan: subscription.plan.name,
+      maxUsers: subscription.plan.maxUsers,
+      startDate: subscription.startDate,
+      endDate: subscription.endDate
+    },
+    tokens: {
+      accessToken,
+      refreshToken
+    }
+  }, 201);
+});
+
+/**
+ * Login user with credentials
+ */
+export const login = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return errorResponse(res, 'Email and password are required', 400);
+  }
+
+  // Find user with relations
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: {
+      role: true,
+      organization: {
+        include: {
+          subscription: {
+            include: { plan: true }
+          }
+        }
+      }
+    }
+  });
+
+  if (!user) {
+    return errorResponse(res, 'Invalid credentials', 401);
+  }
+
+  // Verify password
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  if (!isPasswordValid) {
+    return errorResponse(res, 'Invalid credentials', 401);
+  }
+
+  // Generate tokens
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+
+  // Update refresh token in database
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { refreshToken }
+  });
+
+  return successResponse(res, 'Login successful', {
+    user: {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role.name,
+      orgId: user.orgId
+    },
+    subscription: user.organization.subscription ? {
+      plan: user.organization.subscription.plan.name,
+      maxUsers: user.organization.subscription.plan.maxUsers,
+      status: user.organization.subscription.status,
+      endDate: user.organization.subscription.endDate
+    } : null,
+    tokens: {
+      accessToken,
+      refreshToken
+    }
+  }, 200);
+});
+
+/**
+ * Refresh access token using refresh token
+ */
+export const refresh = asyncHandler(async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return errorResponse(res, 'Refresh token required', 400);
+  }
+
   try {
-    const { firstName, lastName, email, password, orgName } = req.body;
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) return res.status(400).json({ message: "Email already registered" });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const organization = await prisma.organization.create({ data: { name: orgName } });
-
-    const role = await prisma.role.findUnique({ where: { name: "OrgAdmin" } });
-    if (!role) return res.status(500).json({ message: "Roles not seeded" });
-
-    const user = await prisma.user.create({
-      data: {
-        firstName,
-        lastName,
-        email,
-        password: hashedPassword,
-        orgId: organization.id,
-        roleId: role.id,
-      },
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      include: { role: true }
     });
 
-    const token = generateToken(user);
+    if (!user || user.refreshToken !== refreshToken) {
+      return errorResponse(res, 'Invalid refresh token', 401);
+    }
 
-    res.status(201).json({
-      message: "Organization registered successfully",
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        role: "OrgAdmin",
-        orgId: organization.id,
-      },
+    const newAccessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user);
+
+    // Update refresh token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken: newRefreshToken }
+    });
+
+    return successResponse(res, 'Token refreshed', {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    return errorResponse(res, 'Invalid refresh token', 401);
   }
-};
+});
 
-// ✅ Named export for login
-export const login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.status(400).json({ message: "User not found" });
+/**
+ * Logout user by invalidating refresh token
+ */
+export const logout = asyncHandler(async (req, res) => {
+  const userId = req.user?.id;
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: "Invalid password" });
-
-    const token = generateToken(user);
-    res.json({ token });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+  if (!userId) {
+    return errorResponse(res, 'User not authenticated', 401);
   }
-};
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { refreshToken: null }
+  });
+
+  return successResponse(res, 'Logged out successfully');
+});
