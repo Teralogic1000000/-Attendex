@@ -10,7 +10,7 @@ import { SUBSCRIPTION_STATUS } from '../constants/subscriptionPlans.js';
  * Register a new organization with user and default Basic subscription
  */
 export const register = asyncHandler(async (req, res) => {
-  const { firstName, lastName, email, password, orgName } = req.body;
+  const { firstName, lastName, email, password, orgName, logoUrl, theme } = req.body;
 
   // Validate required fields
   if (!firstName || !lastName || !email || !password || !orgName) {
@@ -31,7 +31,7 @@ export const register = asyncHandler(async (req, res) => {
 
   // Create organization
   const organization = await prisma.organization.create({
-    data: { name: orgName }
+    data: { name: orgName, logoUrl, theme }
   });
 
   // Get or create OrgAdmin role
@@ -58,10 +58,28 @@ export const register = asyncHandler(async (req, res) => {
     include: { role: true, organization: true }
   });
 
-  // Get Basic plan
-  const basicPlan = await prisma.subscriptionPlan.findUnique({
+  // Get Basic plan (seed may not have been run)
+  let basicPlan = await prisma.subscriptionPlan.findUnique({
     where: { name: 'Basic' }
   });
+
+  if (!basicPlan) {
+    // create a minimal default plan so registration can succeed
+    basicPlan = await prisma.subscriptionPlan.create({
+      data: {
+        name: 'Basic',
+        maxUsers: 5,
+        price: 0,
+        duration: 30,
+        features: [
+          'Limited features',
+          'Core system access',
+          'Up to 5 team members',
+          'Basic support'
+        ]
+      }
+    });
+  }
 
   // Create subscription with Basic plan
   const endDate = new Date();
@@ -154,16 +172,29 @@ export const login = asyncHandler(async (req, res) => {
     data: { refreshToken }
   });
 
+  // build user response including organization info (logo/theme)
+  const resUser = {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    role: user.role.name,
+    orgId: user.orgId,
+  }
+
+  if (user.organization) {
+    resUser.organization = {
+      id: user.organization.id,
+      name: user.organization.name,
+      email: user.organization.email,
+      logoUrl: user.organization.logoUrl,
+      theme: user.organization.theme,
+    }
+  }
+
   return successResponse(res, 'Login successful', {
-    user: {
-      id: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      role: user.role.name,
-      orgId: user.orgId
-    },
-    subscription: user.organization.subscription ? {
+    user: resUser,
+    subscription: user.organization?.subscription ? {
       plan: user.organization.subscription.plan.name,
       maxUsers: user.organization.subscription.plan.maxUsers,
       status: user.organization.subscription.status,

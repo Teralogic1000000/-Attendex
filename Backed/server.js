@@ -1,27 +1,29 @@
-import morgan from 'morgan';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-dotenv.config();
-import errorHandler from './src/Middleware/errorMiddleware.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
 import app from './src/app.js';
+import prisma from './src/config/prisma.js';
 
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(morgan('dev'));
-app.use(helmet());
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100
+const server = app.listen(PORT, () => {
+  console.log(`Backend server running on http://localhost:${PORT}`);
 });
 
-app.use(limiter);
-app.use(errorHandler);
-
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+// Handle graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  server.close(async () => {
+    console.log('HTTP server closed');
+    await prisma.$disconnect();
+    process.exit(0);
+  });
 });
+
+export default server;

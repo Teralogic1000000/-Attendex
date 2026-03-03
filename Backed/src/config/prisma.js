@@ -1,8 +1,14 @@
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient({
-  log: ['query', 'error', 'warn'],
-});
+const globalForPrisma = global || {};
+
+if (!globalForPrisma.prisma) {
+  globalForPrisma.prisma = new PrismaClient({
+    log: ['error', 'warn'],
+  });
+}
+
+const prisma = globalForPrisma.prisma;
 
 prisma.$connect()
   .then(() => {

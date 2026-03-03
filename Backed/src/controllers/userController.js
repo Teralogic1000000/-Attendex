@@ -261,6 +261,8 @@ export const updatePassword = asyncHandler(async (req, res) => {
  */
 export const getUserStats = asyncHandler(async (req, res) => {
   const orgId = req.user.orgId;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   const totalUsers = await prisma.user.count({
     where: { orgId }
@@ -286,8 +288,40 @@ export const getUserStats = asyncHandler(async (req, res) => {
     })
   );
 
+  // Get employees present today (who checked in at least)
+  const presentToday = await prisma.attendance.findMany({
+    where: {
+      user: { orgId },
+      date: {
+        gte: today
+      }
+    },
+    distinct: ['userId'],
+    select: { userId: true }
+  });
+
+  // Calculate average hours worked today
+  const attendanceToday = await prisma.attendance.findMany({
+    where: {
+      user: { orgId },
+      date: {
+        gte: today
+      }
+    },
+    select: {
+      totalHours: true
+    }
+  });
+
+  const avgHours = attendanceToday.length > 0
+    ? (attendanceToday.reduce((sum, a) => sum + (a.totalHours || 0), 0) / attendanceToday.length).toFixed(1)
+    : '0.0';
+
   return successResponse(res, 'User statistics retrieved', {
     totalUsers,
+    totalEmployees: totalUsers,
+    presentToday: presentToday.length,
+    avgHours: parseFloat(avgHours),
     usersByRole: rolesWithCounts
   });
 });

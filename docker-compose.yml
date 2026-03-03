@@ -1,0 +1,46 @@
+version: '3.9'
+
+services:
+  database:
+    image: postgres:16-alpine
+    container_name: attendex-db
+    environment:
+      POSTGRES_USER: attendex_user
+      POSTGRES_PASSWORD: attendex_password
+      POSTGRES_DB: attendex_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U attendex_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: attendex-backend
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://attendex_user:attendex_password@database:5432/attendex_db
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-super-secret-refresh-key}
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+
+volumes:
+  db_data:
+
+networks:
+  default:
+    name: attendex_network

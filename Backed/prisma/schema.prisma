@@ -8,14 +8,25 @@ datasource db {
 }
 
 model Organization {
-  id            String   @id @default(uuid())
-  name          String
-  email         String?
-  phone         String?
-  createdAt     DateTime @default(now())
+  id              String   @id @default(uuid())
+  name            String
+  email           String?
+  phone           String?
+  address         String?
+  industry        String?
+  size            String?
+  logoUrl         String?    // custom organization logo image URL
+  theme           Json?      // { primary: "#ff6600", secondary: "#000000", darkMode: Boolean }
+  status          String   @default("ACTIVE") // ACTIVE, SUSPENDED, DELETED
+  subscriptionId  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+  createdByUserId String?
+
   users         User[]
   attendances   Attendance[]
   subscription  OrganizationSubscription?
+  auditLogs     AuditLog[] @relation("OrgAuditLogs")
 }
 
 model Role {
@@ -25,19 +36,26 @@ model Role {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  firstName    String
-  lastName     String
-  email        String   @unique
-  password     String
-  orgId        String
-  roleId       String
-  refreshToken String?
-  createdAt    DateTime @default(now())
+  id            String   @id @default(uuid())
+  firstName     String
+  lastName      String
+  email         String   @unique
+  password      String
+  phone         String?
+  position      String?
+  department    String?
+  orgId         String?
+  roleId        String
+  status        String   @default("ACTIVE") // ACTIVE, DISABLED, DELETED
+  refreshToken  String?
+  lastLogin     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
 
-  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  role         Role         @relation(fields: [roleId], references: [id])
-  attendance   Attendance[]
+  organization  Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  role          Role           @relation(fields: [roleId], references: [id])
+  attendance    Attendance[]
+  auditLogsMade AuditLog[]      @relation("UserAuditLogs")
 }
 
 model Attendance {
@@ -46,35 +64,90 @@ model Attendance {
   checkIn    DateTime?
   checkOut   DateTime?
   totalHours Float?
+  status     String   @default("Present") // Present, Absent, Late, etc
+  ipAddress  String?
   userId     String
   orgId      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
 
-  user User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
 }
 
 model SubscriptionPlan {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  maxUsers    Int
-  price       Float
-  duration    Int
-  features    String[] // JSON array of features
-  createdAt   DateTime @default(now())
+  id                    String   @id @default(uuid())
+  name                  String   @unique
+  description           String?
+  maxEmployees          Int      @default(10)
+  maxAttendanceRecords  Int      @default(1000)
+  price                 Int      @default(0) // In cents
+  credits               Int      @default(0)
+  interval              String   @default("monthly") // monthly, yearly
+  features              String[] // JSON array of features
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @default(now()) @updatedAt
 
   subscriptions OrganizationSubscription[]
 }
 
 model OrganizationSubscription {
-  id        String   @id @default(uuid())
-  orgId     String   @unique
-  planId    String
-  startDate DateTime @default(now())
-  endDate   DateTime
-  status    String   @default("ACTIVE")
+  id                String   @id @default(uuid())
+  orgId             String   @unique
+  planId            String
+  status            String   @default("ACTIVE") // ACTIVE, OVERDUE, SUSPENDED, EXPIRED, CANCELLED
+  startDate         DateTime @default(now())
+  nextBillingDate   DateTime?
+  endDate           DateTime?
+  paymentStatus     String   @default("PENDING") // PENDING, PAID, FAILED, OVERDUE
+  cancellationDate  DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
 
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   plan         SubscriptionPlan @relation(fields: [planId], references: [id])
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  action        String   // CREATE_ORG, DELETE_ORG, SUSPEND_ORG, UPDATE_USER, etc
+  resource      String   // User, Organization, Subscription, etc
+  resourceId    String   // ID of the resource changed
+  changes       String?  // JSON string of what changed
+  reason        String?  // Why the action was taken
+  ipAddress     String?
+  userAgent     String?
+  orgId         String?
+  createdAt     DateTime @default(now())
+
+  user          User?        @relation("UserAuditLogs", fields: [userId], references: [id], onDelete: SetNull)
+  userId        String?
+  organization  Organization? @relation("OrgAuditLogs", fields: [orgId], references: [id], onDelete: SetNull)
+
+  @@index([action])
+  @@index([resourceId])
+  @@index([orgId])
+  @@index([userId])
+}
+
+model SystemSettings {
+  id            String   @id @default(uuid())
+  key           String   @unique
+  value         String
+  dataType      String   @default("string") // string, number, boolean, json
+  description   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

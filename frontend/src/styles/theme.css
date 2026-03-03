@@ -1,0 +1,179 @@
+/**
+ * Organization Theme CSS
+ * Provides CSS custom properties for dynamic theme colors
+ * and dark mode support
+ */
+
+:root {
+  /* Default organization theme colors (orange) */
+  --org-primary: #ff6600;
+  --org-primary-light: #ff8533;
+  --org-primary-dark: #cc5200;
+  --org-secondary: #000000;
+
+  /* Default dashboard theme colors (employee) */
+  --dashboard-primary: #10b981;
+  --dashboard-secondary: #94a3b8;
+  --dashboard-primary-dark: #059669;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root.org-dark-mode {
+    --org-primary: #ff8533;
+    --org-secondary: #f5f5f5;
+  }
+}
+
+/* Dynamic theme button styling */
+.btn-primary {
+  background-color: var(--dashboard-primary);
+  border-color: var(--dashboard-primary);
+}
+
+.btn-primary:hover {
+  background-color: var(--dashboard-primary-dark);
+  border-color: var(--dashboard-primary-dark);
+}
+
+.btn-primary:active {
+  background-color: var(--dashboard-primary-dark);
+}
+
+.btn-primary:disabled {
+  background-color: #cbd5e1;
+  border-color: #cbd5e1;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Dynamic accent colors */
+.accent-primary {
+  color: var(--org-primary);
+}
+
+.bg-accent-primary {
+  background-color: var(--org-primary);
+}
+
+.border-accent-primary {
+  border-color: var(--org-primary);
+}
+
+/* Sidebar theme */
+.bg-sidebar {
+  background-color: var(--dashboard-primary-dark);
+  border-right-color: var(--dashboard-primary);
+}
+
+.sidebar-active {
+  background-color: var(--dashboard-primary);
+  color: white;
+}
+
+.sidebar-hover:hover {
+  background-color: var(--dashboard-primary);
+  opacity: 0.8;
+}
+
+/* Header and navigation theming */
+.header-primary {
+  background-color: var(--dashboard-primary);
+  color: white;
+}
+
+/* Links with theme color */
+a.themed-link {
+  color: var(--dashboard-primary);
+}
+
+a.themed-link:hover {
+  color: var(--dashboard-primary-dark);
+}
+
+/* Badge and status colors */
+.badge-primary {
+  background-color: var(--org-primary);
+  color: white;
+}
+
+/* Card borders with theme */
+.card-themed {
+  border-color: var(--dashboard-primary);
+  border-left-width: 4px;
+}
+
+/* Focus states with theme color */
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--dashboard-primary);
+  box-shadow: 0 0 0 3px rgba(var(--dashboard-primary-rgb, 16 185 145), 0.1);
+}
+
+/* Dark mode specific */
+.org-dark-mode {
+  color-scheme: dark;
+}
+
+.org-dark-mode .bg-white {
+  background-color: #1a1a1a;
+}
+
+.org-dark-mode .text-slate-900 {
+  color: #f1f5f9;
+}
+
+.org-dark-mode .text-slate-700 {
+  color: #cbd5e1;
+}
+
+.org-dark-mode .border-slate-200 {
+  border-color: #334155;
+}
+
+.org-dark-mode .bg-slate-50 {
+  background-color: #0f172a;
+}
+
+/* Organization logo in header */
+.org-logo {
+  max-height: 32px;
+  object-fit: contain;
+}
+
+/* Theme color indicators */
+.theme-color-indicator {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 2px solid #e2e8f0;
+}
+
+/* Gradient backgrounds using org theme */
+.gradient-primary {
+  background: linear-gradient(135deg, var(--dashboard-primary), var(--dashboard-primary-dark));
+}
+
+/* Alert boxes with org theme */
+.alert-themed {
+  background-color: rgba(var(--dashboard-primary-rgb, 16 185 145), 0.1);
+  border-color: var(--dashboard-primary);
+  color: var(--dashboard-primary);
+}
+
+/* Loading spinner with theme color */
+.spinner-primary {
+  border-color: #e2e8f0;
+  border-top-color: var(--dashboard-primary);
+}
+
+/* Skip transitions during theme change */
+@media (prefers-reduced-motion: no-preference) {
+  * {
+    transition-property: background-color, border-color, color;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+}
