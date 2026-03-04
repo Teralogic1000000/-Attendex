@@ -68,9 +68,9 @@ export const register = asyncHandler(async (req, res) => {
     basicPlan = await prisma.subscriptionPlan.create({
       data: {
         name: 'Basic',
-        maxUsers: 5,
+        maxEmployees: 5,
         price: 0,
-        duration: 30,
+        interval: 'monthly',
         features: [
           'Limited features',
           'Core system access',
@@ -116,7 +116,7 @@ export const register = asyncHandler(async (req, res) => {
     },
     subscription: {
       plan: subscription.plan.name,
-      maxUsers: subscription.plan.maxUsers,
+      maxEmployees: subscription.plan.maxEmployees,
       startDate: subscription.startDate,
       endDate: subscription.endDate
     },
@@ -196,7 +196,7 @@ export const login = asyncHandler(async (req, res) => {
     user: resUser,
     subscription: user.organization?.subscription ? {
       plan: user.organization.subscription.plan.name,
-      maxUsers: user.organization.subscription.plan.maxUsers,
+      maxEmployees: user.organization.subscription.plan.maxEmployees,
       status: user.organization.subscription.status,
       endDate: user.organization.subscription.endDate
     } : null,

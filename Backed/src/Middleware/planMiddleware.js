@@ -65,16 +65,16 @@ export const checkUserLimit = async (req, res, next) => {
       where: { orgId }
     });
 
-    if (userCount >= subscription.plan.maxUsers) {
+    if (userCount >= subscription.plan.maxEmployees) {
       return errorResponse(
         res,
-        `User limit reached. Your plan allows maximum ${subscription.plan.maxUsers} users. Upgrade to add more.`,
+        `User limit reached. Your plan allows maximum ${subscription.plan.maxEmployees} users. Upgrade to add more.`,
         403
       );
     }
 
     // Attach remaining slots to request
-    req.userSlotsRemaining = subscription.plan.maxUsers - userCount;
+    req.userSlotsRemaining = subscription.plan.maxEmployees - userCount;
     next();
   } catch (error) {
     console.error('User limit check error:', error);

@@ -35,7 +35,7 @@ export const getSubscription = asyncHandler(async (req, res) => {
     id: subscription.id,
     plan: {
       name: subscription.plan.name,
-      maxUsers: subscription.plan.maxUsers,
+      maxEmployees: subscription.plan.maxEmployees,
       price: subscription.plan.price,
       features: subscription.plan.features
     },
@@ -59,9 +59,9 @@ export const getAllPlans = asyncHandler(async (req, res) => {
   return successResponse(res, 'Plans retrieved', plans.map(plan => ({
     id: plan.id,
     name: plan.name,
-    maxUsers: plan.maxUsers,
+    maxEmployees: plan.maxEmployees,
     price: plan.price,
-    duration: plan.duration,
+    interval: plan.interval,
     features: plan.features
   })));
 });
@@ -136,7 +136,7 @@ export const upgradePlan = asyncHandler(async (req, res) => {
   return successResponse(res, 'Plan upgraded successfully', {
     plan: {
       name: updatedSubscription.plan.name,
-      maxUsers: updatedSubscription.plan.maxUsers,
+      maxEmployees: updatedSubscription.plan.maxEmployees,
       price: updatedSubscription.plan.price
     },
     startDate: updatedSubscription.startDate,
@@ -170,18 +170,18 @@ export const canAddUsers = asyncHandler(async (req, res) => {
     where: { orgId }
   });
 
-  const canAdd = (currentUserCount + parseInt(count)) <= subscription.plan.maxUsers;
-  const maxUsers = subscription.plan.maxUsers;
+  const canAdd = (currentUserCount + parseInt(count)) <= subscription.plan.maxEmployees;
+  const maxEmployees = subscription.plan.maxEmployees;
 
   return successResponse(res, 'User capacity check complete', {
     canAdd,
     currentUserCount,
-    maxUsers,
-    availableSlots: maxUsers - currentUserCount,
+    maxEmployees,
+    availableSlots: maxEmployees - currentUserCount,
     requestedCount: parseInt(count),
     message: canAdd 
-      ? `You can add ${maxUsers - currentUserCount} more users`
-      : `Cannot add ${count} users. Only ${maxUsers - currentUserCount} slots available`
+      ? `You can add ${maxEmployees - currentUserCount} more users`
+      : `Cannot add ${count} users. Only ${maxEmployees - currentUserCount} slots available`
   });
 });
 
@@ -251,13 +251,13 @@ export const getUsageAnalytics = asyncHandler(async (req, res) => {
     where: { orgId }
   });
 
-  const userUsagePercent = Math.round((userCount / subscription.plan.maxUsers) * 100);
+  const userUsagePercent = Math.round((userCount / subscription.plan.maxEmployees) * 100);
 
   return successResponse(res, 'Usage analytics retrieved', {
     plan: subscription.plan.name,
     users: {
       current: userCount,
-      max: subscription.plan.maxUsers,
+      max: subscription.plan.maxEmployees,
       usagePercent: userUsagePercent,
       warning: userUsagePercent >= 80
     },

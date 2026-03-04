@@ -15,9 +15,10 @@ export async function ensureDefaults() {
     data: [
       {
         name: 'Basic',
-        maxUsers: 5,
+        maxEmployees: 5,
+        maxAttendanceRecords: 1000,
         price: 0,
-        duration: 30,
+        interval: 'monthly',
         features: [
           'Limited features',
           'Core system access',
@@ -27,9 +28,10 @@ export async function ensureDefaults() {
       },
       {
         name: 'Standard',
-        maxUsers: 10,
-        price: 15,
-        duration: 30,
+        maxEmployees: 10,
+        maxAttendanceRecords: 5000,
+        price: 1500,
+        interval: 'monthly',
         features: [
           'Up to 10 team members',
           'Advanced reporting',
@@ -40,9 +42,10 @@ export async function ensureDefaults() {
       },
       {
         name: 'Pro',
-        maxUsers: 999,
-        price: 30,
-        duration: 30,
+        maxEmployees: 999,
+        maxAttendanceRecords: 50000,
+        price: 3000,
+        interval: 'monthly',
         features: [
           'Up to 999 team members',
           'Advanced analytics',
