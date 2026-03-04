@@ -17,6 +17,12 @@
   body {
     @apply bg-white text-slate-900 font-sans;
   }
+
+  /* Ensure router-link elements are clickable and have proper cursor */
+  a, router-link, [role="button"] {
+    pointer-events: auto;
+    cursor: pointer;
+  }
 }
 
 @layer components {

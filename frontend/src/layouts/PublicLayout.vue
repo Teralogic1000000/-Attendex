@@ -38,7 +38,7 @@
           >
             Sign in
           </router-link>
-          <router-link to="/register" class="btn-primary">
+          <router-link to="/register" class="btn-primary text-sm py-2">
             Get Started
           </router-link>
         </div>

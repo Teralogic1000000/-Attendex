@@ -19,18 +19,18 @@
           </p>
           <div class="mt-10 flex items-center justify-center gap-4">
             <router-link
-  to="/register"
-  class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 text-base rounded-md flex items-center transition"
->
-  Start Free Trial
-  <ArrowRight class="ml-2 h-4 w-4" />
-</router-link>
+              to="/register"
+              class="btn-primary"
+            >
+              Start Free Trial
+              <ArrowRight class="ml-2 h-4 w-4" />
+            </router-link>
             <a
-  href="#features"
-  class="px-6 py-3 text-base border border-amber-600 text-amber-600 rounded-md transition duration-300 ease-in-out hover:bg-amber-600 hover:text-white hover:-translate-y-0.5 inline-flex items-center"
->
-  Learn More
-</a>
+              href="#features"
+              class="inline-flex items-center justify-center rounded-lg bg-white px-6 py-3 text-base font-semibold text-primary-600 ring-1 ring-inset ring-primary-200 hover:bg-primary-50 transition-colors"
+            >
+              Learn More
+            </a>
           </div>
         </div>
       </div>
@@ -94,7 +94,7 @@
         </p>
         <router-link
           to="/register"
-          class="mt-8 inline-flex items-center justify-center rounded-lg bg-white px-6 py-3 text-base font-semibold text-primary-600 shadow-sm hover:bg-primary-50 transition-colors"
+          class="mt-8 inline-flex items-center justify-center rounded-lg bg-white px-6 py-3 text-base font-semibold text-primary-600 shadow-sm hover:bg-primary-50 transition-colors cursor-pointer"
         >
           Get Started Today
           <ArrowRight class="ml-2 h-4 w-4" />
