@@ -5,7 +5,6 @@ import { ROLES } from '@/utils/constants'
 // Layouts
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import EmployeeLayout from '@/layouts/EmployeeLayout.vue'
-import OrgAdminLayout from '@/layouts/OrgAdminLayout.vue'
 import SuperAdminLayout from '@/layouts/SuperAdminLayout.vue'
 
 const routes = [
@@ -37,6 +36,21 @@ const routes = [
         component: () => import('@/views/public/ForgotPasswordView.vue'),
         meta: { guestOnly: true },
       },
+      {
+        path: 'about',
+        name: 'About',
+        component: () => import('@/views/public/AboutView.vue'),
+      },
+      {
+        path: 'pricing',
+        name: 'Pricing',
+        component: () => import('@/views/public/PricingView.vue'),
+      },
+      {
+        path: 'contact',
+        name: 'Contact',
+        component: () => import('@/views/public/ContactView.vue'),
+      },
     ],
   },
 
@@ -64,36 +78,46 @@ const routes = [
     ],
   },
 
-  // OrgAdmin routes
+  // OrgAdmin routes - TrackTimi Admin Dashboard
   {
     path: '/admin',
-    component: OrgAdminLayout,
+    component: () => import('@/layouts/AppLayout.vue'),
     meta: { requiresAuth: true, role: ROLES.ORG_ADMIN },
     children: [
       {
         path: 'dashboard',
-        name: 'OrgDashboard',
-        component: () => import('@/views/orgadmin/OrgDashboard.vue'),
+        name: 'Dashboard',
+        component: () => import('@/pages/Dashboard.vue'),
       },
       {
         path: 'users',
-        name: 'UserManagement',
-        component: () => import('@/views/orgadmin/UserManagement.vue'),
+        name: 'Users',
+        component: () => import('@/pages/Users.vue'),
+      },
+      {
+        path: 'departments',
+        name: 'Departments',
+        component: () => import('@/pages/Departments.vue'),
+      },
+      {
+        path: 'shifts',
+        name: 'Shifts',
+        component: () => import('@/pages/Shifts.vue'),
       },
       {
         path: 'attendance',
-        name: 'OrgAttendance',
-        component: () => import('@/views/orgadmin/OrgAttendance.vue'),
+        name: 'Attendance',
+        component: () => import('@/pages/Attendance.vue'),
       },
       {
-        path: 'subscription',
-        name: 'SubscriptionSettings',
-        component: () => import('@/views/orgadmin/SubscriptionSettings.vue'),
+        path: 'reports',
+        name: 'Reports',
+        component: () => import('@/pages/Reports.vue'),
       },
       {
         path: 'settings',
-        name: 'OrgSettings',
-        component: () => import('@/views/orgadmin/OrgSettings.vue'),
+        name: 'Settings',
+        component: () => import('@/pages/Settings.vue'),
       },
     ],
   },
@@ -110,24 +134,44 @@ const routes = [
         component: () => import('@/views/superadmin/SuperAdminDashboard.vue'),
       },
       {
-        path: 'overview',
-        name: 'SystemOverview',
-        component: () => import('@/views/superadmin/SystemOverview.vue'),
-      },
-      {
         path: 'organizations',
         name: 'OrganizationDirectory',
         component: () => import('@/views/superadmin/OrganizationDirectory.vue'),
       },
       {
-        path: 'plans',
-        name: 'PlanManagement',
-        component: () => import('@/views/superadmin/PlanManagement.vue'),
+        path: 'revenue',
+        name: 'RevenueIntelligence',
+        component: () => import('@/views/superadmin/RevenueIntelligence.vue'),
       },
       {
-        path: 'logs',
-        name: 'SystemLogs',
-        component: () => import('@/views/superadmin/SystemLogs.vue'),
+        path: 'subscriptions',
+        name: 'SubscriptionManagement',
+        component: () => import('@/views/superadmin/SubscriptionManagement.vue'),
+      },
+      {
+        path: 'analytics',
+        name: 'GlobalAnalytics',
+        component: () => import('@/views/superadmin/GlobalAnalytics.vue'),
+      },
+      {
+        path: 'monitoring',
+        name: 'SystemMonitoring',
+        component: () => import('@/views/superadmin/SystemMonitoring.vue'),
+      },
+      {
+        path: 'audit-logs',
+        name: 'AuditLogs',
+        component: () => import('@/views/superadmin/AuditLogs.vue'),
+      },
+      {
+        path: 'support',
+        name: 'SupportTools',
+        component: () => import('@/views/superadmin/SupportTools.vue'),
+      },
+      {
+        path: 'settings',
+        name: 'PlatformSettings',
+        component: () => import('@/views/superadmin/PlatformSettings.vue'),
       },
     ],
   },

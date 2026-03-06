@@ -29,7 +29,3 @@ watch(
   { deep: true }
 )
 </script>
-
-<style>
-@import '@/styles/theme.css';
-</style>

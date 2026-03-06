@@ -162,3 +162,218 @@ export const getOrgAttendance = asyncHandler(async (req, res) => {
     }
   });
 });
+
+// Admin CRUD Operations
+export const getAttendance = asyncHandler(async (req, res) => {
+  const orgId = req.user.orgId;
+  const { skip = 0, take = 10, userId, status, dateFrom, dateTo } = req.query;
+
+  const where = {
+    orgId,
+    ...(userId && { userId }),
+    ...(status && { status })
+  };
+
+  if (dateFrom || dateTo) {
+    where.date = {};
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      where.date.gte = from;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      where.date.lte = to;
+    }
+  }
+
+  const total = await prisma.attendance.count({ where });
+  const records = await prisma.attendance.findMany({
+    where,
+    include: {
+      user: {
+        select: { id: true, firstName: true, lastName: true, email: true }
+      }
+    },
+    skip: parseInt(skip),
+    take: parseInt(take),
+    orderBy: { date: 'desc' }
+  });
+
+  return successResponse(res, 'Attendance records fetched', {
+    records,
+    pagination: { total, skip: parseInt(skip), take: parseInt(take) }
+  });
+});
+
+export const getAttendanceRecord = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const orgId = req.user.orgId;
+
+  const record = await prisma.attendance.findFirst({
+    where: { id, orgId },
+    include: {
+      user: {
+        select: { id: true, firstName: true, lastName: true, email: true, departmentId: true, shiftId: true }
+      }
+    }
+  });
+
+  if (!record) {
+    return errorResponse(res, 'Attendance record not found', 404);
+  }
+
+  return successResponse(res, 'Attendance record fetched', { record });
+});
+
+export const createAttendance = asyncHandler(async (req, res) => {
+  const { userId, date, checkIn, checkOut, status = 'Present', totalHours } = req.body;
+  const orgId = req.user.orgId;
+
+  if (!userId || !date) {
+    return errorResponse(res, 'User ID and date are required', 400);
+  }
+
+  // Check if user exists in org
+  const user = await prisma.user.findFirst({
+    where: { id: userId, orgId }
+  });
+
+  if (!user) {
+    return errorResponse(res, 'User not found in this organization', 404);
+  }
+
+  // Check for duplicate date record
+  const existing = await prisma.attendance.findFirst({
+    where: {
+      userId,
+      date: new Date(date),
+      orgId
+    }
+  });
+
+  if (existing) {
+    return errorResponse(res, 'Attendance record already exists for this date', 400);
+  }
+
+  const record = await prisma.attendance.create({
+    data: {
+      userId,
+      orgId,
+      date: new Date(date),
+      checkIn: checkIn ? new Date(checkIn) : null,
+      checkOut: checkOut ? new Date(checkOut) : null,
+      totalHours: totalHours ? parseFloat(totalHours) : null,
+      status
+    },
+    include: {
+      user: {
+        select: { firstName: true, lastName: true, email: true }
+      }
+    }
+  });
+
+  return successResponse(res, 'Attendance record created', { record }, 201);
+});
+
+export const updateAttendance = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const orgId = req.user.orgId;
+  const { checkIn, checkOut, status, totalHours } = req.body;
+
+  const record = await prisma.attendance.findFirst({
+    where: { id, orgId }
+  });
+
+  if (!record) {
+    return errorResponse(res, 'Attendance record not found', 404);
+  }
+
+  const updateData = {};
+  if (checkIn !== undefined) updateData.checkIn = new Date(checkIn);
+  if (checkOut !== undefined) updateData.checkOut = new Date(checkOut);
+  if (status !== undefined) updateData.status = status;
+  if (totalHours !== undefined) updateData.totalHours = parseFloat(totalHours);
+
+  const updated = await prisma.attendance.update({
+    where: { id },
+    data: updateData,
+    include: {
+      user: {
+        select: { firstName: true, lastName: true, email: true }
+      }
+    }
+  });
+
+  return successResponse(res, 'Attendance record updated', { record: updated });
+});
+
+export const deleteAttendance = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const orgId = req.user.orgId;
+
+  const record = await prisma.attendance.findFirst({
+    where: { id, orgId }
+  });
+
+  if (!record) {
+    return errorResponse(res, 'Attendance record not found', 404);
+  }
+
+  await prisma.attendance.delete({
+    where: { id }
+  });
+
+  return successResponse(res, 'Attendance record deleted');
+});
+
+export const approveAttendance = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const orgId = req.user.orgId;
+
+  const record = await prisma.attendance.findFirst({
+    where: { id, orgId }
+  });
+
+  if (!record) {
+    return errorResponse(res, 'Attendance record not found', 404);
+  }
+
+  const updated = await prisma.attendance.update({
+    where: { id },
+    data: { status: 'Approved' },
+    include: {
+      user: {
+        select: { firstName: true, lastName: true, email: true }
+      }
+    }
+  });
+
+  return successResponse(res, 'Attendance record approved', { record: updated });
+});
+
+export const rejectAttendance = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const orgId = req.user.orgId;
+
+  const record = await prisma.attendance.findFirst({
+    where: { id, orgId }
+  });
+
+  if (!record) {
+    return errorResponse(res, 'Attendance record not found', 404);
+  }
+
+  const updated = await prisma.attendance.update({
+    where: { id },
+    data: { status: 'Rejected' },
+    include: {
+      user: {
+        select: { firstName: true, lastName: true, email: true }
+      }
+    }
+  });
+
+  return successResponse(res, 'Attendance record rejected', { record: updated });
+});

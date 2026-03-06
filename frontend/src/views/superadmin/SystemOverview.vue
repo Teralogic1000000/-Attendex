@@ -90,7 +90,7 @@ const growthChartData = ref({
   datasets: [
     {
       label: 'New Organizations',
-      backgroundColor: '#4F46E5',
+      backgroundColor: '#1e293b',
       borderRadius: 6,
       data: [0, 0, 0, 0, 0, 0],
     },
@@ -112,7 +112,7 @@ const doughnutChartData = ref({
   datasets: [
     {
       data: [0, 0, 0, 0],
-      backgroundColor: ['#94A3B8', '#6366F1', '#059669', '#D97706'],
+      backgroundColor: ['#1e293b', '#eab308', '#475569', '#a16207'],
       borderWidth: 0,
     },
   ],

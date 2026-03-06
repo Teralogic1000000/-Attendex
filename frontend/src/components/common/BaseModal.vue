@@ -6,10 +6,10 @@
         class="fixed inset-0 z-40 flex items-center justify-center p-4"
         @click.self="$emit('close')"
       >
-        <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm" aria-hidden="true" />
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true" />
         <div
           :class="sizeClass"
-          class="relative w-full bg-white rounded-xl shadow-2xl ring-1 ring-slate-950/5 overflow-hidden"
+          class="relative w-full bg-white rounded-xl shadow-2xl ring-1 ring-slate-900/5 overflow-hidden"
           role="dialog"
           aria-modal="true"
         >

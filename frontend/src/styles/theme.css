@@ -12,9 +12,9 @@
   --org-secondary: #000000;
 
   /* Default dashboard theme colors (employee) */
-  --dashboard-primary: #10b981;
+  --dashboard-primary: #ff6600;
   --dashboard-secondary: #94a3b8;
-  --dashboard-primary-dark: #059669;
+  --dashboard-primary-dark: #ff6600;
 }
 
 /* Dark mode support */

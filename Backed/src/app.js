@@ -11,6 +11,8 @@ import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import superadminRoutes from './routes/superadminRoutes.js';
 import organizationRoutes from './routes/organizationRoutes.js';
+import departmentRoutes from './routes/departmentRoutes.js';
+import shiftsRoutes from './routes/shiftsRoutes.js';
 
 const app = express();
 app.use(cors());
@@ -23,9 +25,8 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/organization', organizationRoutes);
+app.use('/api/departments', departmentRoutes);
+app.use('/api/shifts', shiftsRoutes);
 app.use('/api/superadmin', superadminRoutes);
-
-// Error handler MUST be last
-app.use(errorHandler);
 
 export default app;

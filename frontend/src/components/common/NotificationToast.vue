@@ -32,10 +32,10 @@ const notifications = computed(() => notify.notifications)
 
 function toastClass(type) {
   const classes = {
-    success: 'bg-accent-50 text-accent-800 ring-accent-200',
-    error: 'bg-danger-50 text-danger-800 ring-danger-200',
-    warning: 'bg-warning-50 text-warning-800 ring-warning-200',
-    info: 'bg-primary-50 text-primary-800 ring-primary-200',
+    success: 'bg-green-50 text-green-800 ring-green-200',
+    error: 'bg-red-50 text-red-800 ring-red-200',
+    warning: 'bg-yellow-50 text-yellow-800 ring-yellow-200',
+    info: 'bg-blue-50 text-blue-800 ring-blue-200',
   }
   return classes[type] || classes.info
 }

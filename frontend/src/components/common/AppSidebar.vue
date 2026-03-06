@@ -1,21 +1,21 @@
 <template>
   <aside
     :class="collapsed ? 'w-16' : 'w-64'"
-    class="fixed inset-y-0 left-0 z-30 flex flex-col bg-sidebar transition-all duration-300"
+    class="fixed inset-y-0 left-0 z-30 flex flex-col bg-slate-900 transition-all duration-300"
     :style="sidebarStyle"
   >
     <!-- Logo -->
-    <div class="flex h-16 items-center gap-3 px-4 border-b border-slate-700/50">
+    <div class="flex h-16 items-center gap-3 px-4 border-b border-slate-800">
       <img
         v-if="orgLogo"
         :src="orgLogo"
         alt="Logo"
         class="org-logo"
       />
-      <div v-else class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-600 text-white font-bold text-sm">
+      <div v-else class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-600 text-white font-bold text-sm">
         A
       </div>
-      <span v-show="!collapsed" class="text-lg font-bold text-white tracking-tight">Attendex</span>
+      <span v-show="!collapsed" class="text-lg font-bold text-white tracking-tight">TrackTimi</span>
     </div>
 
     <!-- Navigation -->
@@ -26,8 +26,8 @@
             :to="item.to"
             :class="[
               isActive(item.to)
-                ? 'sidebar-active'
-                : 'text-slate-300 sidebar-hover',
+                ? 'bg-orange-600 text-white'
+                : 'text-slate-300 hover:bg-slate-800',
             ]"
             class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
           >
@@ -39,9 +39,9 @@
     </nav>
 
     <!-- User section -->
-    <div class="border-t border-slate-700/50 p-3">
+    <div class="border-t border-slate-800 p-3">
       <div class="flex items-center gap-3">
-        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-600 text-white text-sm font-semibold">
+        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-600 text-white text-sm font-semibold">
           {{ initials }}
         </div>
         <div v-show="!collapsed" class="flex-1 overflow-hidden">
@@ -51,7 +51,7 @@
         <button
           v-show="!collapsed"
           @click="handleLogout"
-          class="shrink-0 rounded-lg p-1.5 text-slate-400 hover:text-white hover:bg-sidebar-hover transition-colors"
+          class="shrink-0 rounded-lg p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
           title="Logout"
         >
           <LogOut class="h-4 w-4" />
@@ -63,7 +63,7 @@
     <!-- Collapse toggle -->
     <button
       @click="$emit('toggle')"
-      class="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-slate-200 text-slate-500 hover:text-slate-700 transition-colors"
+      class="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-gray-200 text-dark-900 hover:text-primary-500 transition-colors"
     >
       <ChevronLeft v-if="!collapsed" class="h-3.5 w-3.5" />
       <ChevronRight v-else class="h-3.5 w-3.5" />

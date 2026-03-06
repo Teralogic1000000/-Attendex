@@ -13,18 +13,57 @@ export const getSubscription = asyncHandler(async (req, res) => {
     return errorResponse(res, 'Organization not found', 404);
   }
 
-  const subscription = await prisma.organizationSubscription.findUnique({
+  let subscription = await prisma.organizationSubscription.findUnique({
     where: { orgId },
     include: { plan: true, organization: true }
   });
 
+  // If no subscription exists, auto-assign BASIC (free) plan
   if (!subscription) {
-    return errorResponse(res, 'No subscription found', 404);
+    try {
+      // Find or create the BASIC plan
+      let basicPlan = await prisma.subscriptionPlan.findUnique({
+        where: { id: 'basic' }
+      });
+
+      // If BASIC plan doesn't exist in DB, create it
+      if (!basicPlan) {
+        basicPlan = await prisma.subscriptionPlan.create({
+          data: {
+            id: 'basic',
+            name: 'Basic',
+            maxEmployees: 5,
+            price: 0,
+            interval: 30,
+            features: ['Limited features', 'Core system access', 'Up to 5 team members', 'Basic support']
+          }
+        });
+      }
+
+      // Create subscription with BASIC plan
+      const today = new Date();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 30); // 30 days from today
+
+      subscription = await prisma.organizationSubscription.create({
+        data: {
+          orgId,
+          planId: 'basic',
+          startDate: today,
+          endDate,
+          status: 'ACTIVE'
+        },
+        include: { plan: true, organization: true }
+      });
+    } catch (err) {
+      console.error('Error auto-assigning free plan:', err);
+      return errorResponse(res, 'Could not retrieve or assign subscription', 500);
+    }
   }
 
   // Check if subscription is expired
   const isExpired = new Date(subscription.endDate) < new Date();
-  const status = isExpired ? SUBSCRIPTION_STATUS.EXPIRED : subscription.status;
+  const status = isExpired ? 'EXPIRED' : subscription.status;
 
   // Get current user count
   const userCount = await prisma.user.count({
@@ -33,6 +72,15 @@ export const getSubscription = asyncHandler(async (req, res) => {
 
   return successResponse(res, 'Subscription retrieved', {
     id: subscription.id,
+    subscription: {
+      id: subscription.id,
+      planName: subscription.plan.name,
+      name: subscription.plan.name,
+      maxUsers: subscription.plan.maxEmployees,
+      maxEmployees: subscription.plan.maxEmployees,
+      price: subscription.plan.price,
+      features: subscription.plan.features
+    },
     plan: {
       name: subscription.plan.name,
       maxEmployees: subscription.plan.maxEmployees,
@@ -120,7 +168,13 @@ export const upgradePlan = asyncHandler(async (req, res) => {
 
   // Update subscription
   const newEndDate = new Date();
-  newEndDate.setDate(newEndDate.getDate() + targetPlan.duration);
+  // Calculate end date based on interval (monthly or yearly)
+  if (targetPlan.interval === 'yearly') {
+    newEndDate.setFullYear(newEndDate.getFullYear() + 1);
+  } else {
+    // Default to monthly
+    newEndDate.setMonth(newEndDate.getMonth() + 1);
+  }
 
   const updatedSubscription = await prisma.organizationSubscription.update({
     where: { id: currentSubscription.id },

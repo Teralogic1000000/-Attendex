@@ -5,7 +5,7 @@ export const ROLES = {
 }
 
 export const ROLE_DASHBOARDS = {
-  [ROLES.SUPER_ADMIN]: '/superadmin/overview',
+  [ROLES.SUPER_ADMIN]: '/superadmin/dashboard',
   [ROLES.ORG_ADMIN]: '/admin/dashboard',
   [ROLES.EMPLOYEE]: '/employee/dashboard',
 }

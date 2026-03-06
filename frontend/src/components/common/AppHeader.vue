@@ -1,7 +1,7 @@
 <template>
-  <header class="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-6">
+  <header class="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-black px-6">
     <div>
-      <h1 class="text-lg font-semibold" :class="'text-[var(--dashboard-primary)]'">{{ title }}</h1>
+      <h1 class="text-lg font-semibold text-slate-900">{{ title }}</h1>
       <p v-if="subtitle" class="text-sm text-slate-500">{{ subtitle }}</p>
     </div>
     <div class="flex items-center gap-4">
@@ -11,10 +11,10 @@
           @click="showDropdown = !showDropdown"
           class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-100 transition-colors"
         >
-          <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-primary-700 text-sm font-semibold">
+          <div class="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-orange-600 text-sm font-semibold">
             {{ initials }}
           </div>
-          <ChevronDown class="h-4 w-4 text-slate-400" />
+          <ChevronDown class="h-4 w-4 text-slate-500" />
         </button>
         <transition name="dropdown">
           <div
@@ -32,7 +32,7 @@
             <hr class="my-1 border-slate-100" />
             <button
               @click="handleLogout"
-              class="flex w-full items-center gap-2 px-4 py-2 text-sm text-danger-600 hover:bg-danger-50"
+              class="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
             >
               <LogOut class="h-4 w-4" />
               Logout

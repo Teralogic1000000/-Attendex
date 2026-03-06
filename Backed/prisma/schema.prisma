@@ -25,8 +25,38 @@ model Organization {
 
   users         User[]
   attendances   Attendance[]
+  departments   Department[]
+  shifts        Shift[]
   subscription  OrganizationSubscription?
   auditLogs     AuditLog[] @relation("OrgAuditLogs")
+}
+
+model Department {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  head          String?
+  status        String   @default("ACTIVE")
+  orgId         String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  organization  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  users         User[]
+}
+
+model Shift {
+  id            String   @id @default(uuid())
+  name          String
+  startTime     String    // HH:mm format
+  endTime       String    // HH:mm format
+  status        String   @default("Active") // Active, Inactive
+  orgId         String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  organization  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  users         User[]
 }
 
 model Role {
@@ -43,7 +73,8 @@ model User {
   password      String
   phone         String?
   position      String?
-  department    String?
+  departmentId  String?
+  shiftId       String?
   orgId         String?
   roleId        String
   status        String   @default("ACTIVE") // ACTIVE, DISABLED, DELETED
@@ -54,6 +85,8 @@ model User {
 
   organization  Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
   role          Role           @relation(fields: [roleId], references: [id])
+  department    Department?    @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  shift         Shift?         @relation(fields: [shiftId], references: [id], onDelete: SetNull)
   attendance    Attendance[]
   auditLogsMade AuditLog[]      @relation("UserAuditLogs")
 }
