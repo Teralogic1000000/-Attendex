@@ -1,5 +1,13 @@
 import bcrypt from 'bcrypt';
-import prisma from '../config/prisma.js';
+import {
+  findOne,
+  create,
+  update,
+  findMany,
+  count,
+  deleteById,
+} from '../config/supabaseMapper.js';
+import supabase from '../config/supabaseClient.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
@@ -7,7 +15,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
  * Create a new user in the organization
  */
 export const createUser = asyncHandler(async (req, res) => {
-  const { firstName, lastName, email, password, roleId } = req.body;
+  const { firstName, lastName, email, password, userTypeId } = req.body;
   const orgId = req.user.orgId;
 
   // Validation
@@ -16,44 +24,35 @@ export const createUser = asyncHandler(async (req, res) => {
   }
 
   // Check if email already exists
-  const existingUser = await prisma.user.findUnique({
-    where: { email }
-  });
+  const existingUser = await findOne('user', { email });
 
   if (existingUser) {
     return errorResponse(res, 'Email already in use', 400);
   }
 
-  // Get default Employee role if roleId not provided
-  let role = null;
-  if (roleId) {
-    role = await prisma.role.findUnique({
-      where: { id: roleId }
-    });
+  // Get default Employee user type if userTypeId not provided
+  let userType = null;
+  if (userTypeId) {
+    userType = await findOne('user_type', { id: userTypeId });
   } else {
-    role = await prisma.role.findUnique({
-      where: { name: 'Employee' }
-    });
+    userType = await findOne('user_type', { typeName: 'Employee' });
   }
 
-  if (!role) {
-    return errorResponse(res, 'Invalid role', 400);
+  if (!userType) {
+    return errorResponse(res, 'Invalid user type', 400);
   }
 
   // Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
 
   // Create user
-  const user = await prisma.user.create({
-    data: {
-      firstName,
-      lastName,
-      email,
-      password: hashedPassword,
-      orgId,
-      roleId: role.id
-    },
-    include: { role: true }
+  const user = await create('user', {
+    firstName,
+    lastName,
+    email,
+    password: hashedPassword,
+    orgId,
+    userTypeId: userType.id
   });
 
   return successResponse(res, 'User created successfully', {
@@ -61,40 +60,34 @@ export const createUser = asyncHandler(async (req, res) => {
     firstName: user.firstName,
     lastName: user.lastName,
     email: user.email,
-    role: user.role.name
+    userType: userType.typeName
   }, 201);
 });
 
 /**
  * Get all users in the organization with pagination
+ * Uses user_full_view for readable data (names instead of IDs)
  */
 export const getUsers = asyncHandler(async (req, res) => {
-  const orgId = req.user.orgId;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
 
-  const users = await prisma.user.findMany({
-    where: { orgId },
-    include: { role: true },
-    skip,
-    take: limit,
-    orderBy: { createdAt: 'desc' }
-  });
+  // Use the user_full_view for readable data
+  const { data: users, error, count } = await supabase
+    .from('user_full_view')
+    .select('*', { count: 'exact' })
+    .order('First_Name', { ascending: true })
+    .range(skip, skip + limit - 1);
 
-  const total = await prisma.user.count({
-    where: { orgId }
-  });
+  if (error) {
+    return errorResponse(res, error.message, 400);
+  }
+
+  const total = count || 0;
 
   return successResponse(res, 'Users fetched successfully', {
-    users: users.map(u => ({
-      id: u.id,
-      firstName: u.firstName,
-      lastName: u.lastName,
-      email: u.email,
-      role: u.role.name,
-      createdAt: u.createdAt
-    })),
+    users: users || [],
     pagination: {
       total,
       page,
@@ -107,31 +100,22 @@ export const getUsers = asyncHandler(async (req, res) => {
 
 /**
  * Get a specific user by ID
+ * Uses user_full_view for readable data
  */
 export const getUserById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const orgId = req.user.orgId;
 
-  const user = await prisma.user.findFirst({
-    where: {
-      id,
-      orgId
-    },
-    include: { role: true }
-  });
+  const { data: user, error } = await supabase
+    .from('user_full_view')
+    .select('*')
+    .eq('User_ID', id)
+    .single();
 
-  if (!user) {
+  if (error || !user) {
     return errorResponse(res, 'User not found', 404);
   }
 
-  return successResponse(res, 'User retrieved', {
-    id: user.id,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    role: user.role.name,
-    createdAt: user.createdAt
-  });
+  return successResponse(res, 'User retrieved', user);
 });
 
 /**
@@ -139,46 +123,42 @@ export const getUserById = asyncHandler(async (req, res) => {
  */
 export const updateUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { firstName, lastName, roleId } = req.body;
+  const { firstName, lastName, userTypeId } = req.body;
   const orgId = req.user.orgId;
 
   // Verify user exists in organization
-  const user = await prisma.user.findFirst({
-    where: { id, orgId }
-  });
+  const user = await findOne('user', { id, orgId });
 
   if (!user) {
     return errorResponse(res, 'User not found', 404);
   }
 
-  // Verify role exists if being changed
-  if (roleId) {
-    const role = await prisma.role.findUnique({
-      where: { id: roleId }
-    });
+  // Verify user type exists if being changed
+  if (userTypeId) {
+    const userType = await findOne('user_type', { id: userTypeId });
 
-    if (!role) {
-      return errorResponse(res, 'Invalid role', 400);
+    if (!userType) {
+      return errorResponse(res, 'Invalid user type', 400);
     }
   }
 
+  // Build update data
+  const updateData = {};
+  if (firstName !== undefined) updateData.firstName = firstName;
+  if (lastName !== undefined) updateData.lastName = lastName;
+  if (userTypeId !== undefined) updateData.userTypeId = userTypeId;
+
   // Update user
-  const updatedUser = await prisma.user.update({
-    where: { id },
-    data: {
-      ...(firstName && { firstName }),
-      ...(lastName && { lastName }),
-      ...(roleId && { roleId })
-    },
-    include: { role: true }
-  });
+  const updatedUser = await update('user', id, updateData, 'id');
+
+  const userType = updatedUser.userTypeId ? await findOne('user_type', { id: updatedUser.userTypeId }) : null;
 
   return successResponse(res, 'User updated successfully', {
     id: updatedUser.id,
     firstName: updatedUser.firstName,
     lastName: updatedUser.lastName,
     email: updatedUser.email,
-    role: updatedUser.role.name
+    userType: userType?.typeName || 'Employee'
   });
 });
 
@@ -196,18 +176,14 @@ export const deleteUser = asyncHandler(async (req, res) => {
   }
 
   // Verify user exists in organization
-  const user = await prisma.user.findFirst({
-    where: { id, orgId }
-  });
+  const user = await findOne('user', { id, orgId });
 
   if (!user) {
     return errorResponse(res, 'User not found', 404);
   }
 
   // Delete user (cascades to attendance records)
-  await prisma.user.delete({
-    where: { id }
-  });
+  await deleteById('user', id, 'id');
 
   return successResponse(res, 'User deleted successfully');
 });
@@ -218,7 +194,6 @@ export const deleteUser = asyncHandler(async (req, res) => {
 export const updatePassword = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { currentPassword, newPassword } = req.body;
-  const orgId = req.user.orgId;
   const currentUserId = req.user.id;
 
   // Users can only change their own password
@@ -230,9 +205,7 @@ export const updatePassword = asyncHandler(async (req, res) => {
     return errorResponse(res, 'Current and new password are required', 400);
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id }
-  });
+  const user = await findOne('user', { id });
 
   if (!user) {
     return errorResponse(res, 'User not found', 404);
@@ -248,10 +221,7 @@ export const updatePassword = asyncHandler(async (req, res) => {
   const hashedPassword = await bcrypt.hash(newPassword, 10);
 
   // Update password
-  await prisma.user.update({
-    where: { id },
-    data: { password: hashedPassword }
-  });
+  await update('user', id, { password: hashedPassword }, 'id');
 
   return successResponse(res, 'Password updated successfully');
 });
@@ -264,64 +234,61 @@ export const getUserStats = asyncHandler(async (req, res) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const totalUsers = await prisma.user.count({
-    where: { orgId }
-  });
+  const totalUsers = await count('user', { orgId });
 
-  const usersByRole = await prisma.user.groupBy({
-    by: ['roleId'],
-    where: { orgId },
-    _count: {
-      id: true
+  // Get all users grouped by user type
+  const allUsers = await findMany('user', { orgId });
+  const userTypeMap = {};
+
+  for (const user of allUsers) {
+    if (user.userTypeId) {
+      if (!userTypeMap[user.userTypeId]) {
+        const userType = await findOne('user_type', { id: user.userTypeId });
+        userTypeMap[user.userTypeId] = userType?.typeName || 'Unknown';
+      }
     }
-  });
+  }
 
-  const rolesWithCounts = await Promise.all(
-    usersByRole.map(async (group) => {
-      const role = await prisma.role.findUnique({
-        where: { id: group.roleId }
-      });
-      return {
-        role: role.name,
-        count: group._count.id
-      };
-    })
-  );
+  // Count users by type
+  const usersByType = {};
+  for (const user of allUsers) {
+    const typeName = userTypeMap[user.userTypeId] || 'Unknown';
+    usersByType[typeName] = (usersByType[typeName] || 0) + 1;
+  }
+
+  const usersByRole = Object.entries(usersByType).map(([type, count]) => ({
+    role: type,
+    count
+  }));
 
   // Get employees present today (who checked in at least)
-  const presentToday = await prisma.attendance.findMany({
-    where: {
-      user: { orgId },
-      date: {
-        gte: today
-      }
-    },
-    distinct: ['userId'],
-    select: { userId: true }
+  const attendanceRecords = await findMany('attendance', {}, {
+    limit: 10000 // Fetch all to filter on client side
   });
 
-  // Calculate average hours worked today
-  const attendanceToday = await prisma.attendance.findMany({
-    where: {
-      user: { orgId },
-      date: {
-        gte: today
+  const presentToday = new Set();
+  let totalHoursToday = 0;
+
+  for (const record of attendanceRecords) {
+    if (record.orgId === orgId) {
+      const recordDate = new Date(record.checkInTime);
+      recordDate.setHours(0, 0, 0, 0);
+      if (recordDate.getTime() === today.getTime()) {
+        presentToday.add(record.userId);
+        totalHoursToday += record.totalHours || 0;
       }
-    },
-    select: {
-      totalHours: true
     }
-  });
+  }
 
-  const avgHours = attendanceToday.length > 0
-    ? (attendanceToday.reduce((sum, a) => sum + (a.totalHours || 0), 0) / attendanceToday.length).toFixed(1)
+  const avgHours = presentToday.size > 0
+    ? (totalHoursToday / presentToday.size).toFixed(1)
     : '0.0';
 
   return successResponse(res, 'User statistics retrieved', {
     totalUsers,
     totalEmployees: totalUsers,
-    presentToday: presentToday.length,
+    presentToday: presentToday.size,
     avgHours: parseFloat(avgHours),
-    usersByRole: rolesWithCounts
+    usersByRole
   });
 });

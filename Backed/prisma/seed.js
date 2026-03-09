@@ -47,18 +47,18 @@ const seedData = async () => {
 
     // Create roles
     const superAdminRole = await prisma.role.upsert({
-      where: { name: 'SuperAdmin' },
+      where: { name: 'Super_Admin' },
       update: {},
       create: {
-        name: 'SuperAdmin',
+        name: 'Super_Admin',
       },
     })
 
     const adminRole = await prisma.role.upsert({
-      where: { name: 'OrgAdmin' },
+      where: { name: 'Org_Admin' },
       update: {},
       create: {
-        name: 'OrgAdmin',
+        name: 'Org_Admin',
       },
     })
 
@@ -83,7 +83,6 @@ const seedData = async () => {
         password: await bcrypt.hash('SuperAdmin@123', 10),
         phone: '+1-800-SUPER-ADMIN',
         position: 'System Administrator',
-        department: 'Platform',
         roleId: superAdminRole.id,
         status: 'ACTIVE',
       },
@@ -102,7 +101,6 @@ const seedData = async () => {
         password: await bcrypt.hash('Admin@123', 10),
         phone: '+1-800-ADMIN-1',
         position: 'Administrator',
-        department: 'Management',
         orgId: org1.id,
         roleId: adminRole.id,
         status: 'ACTIVE',
@@ -119,7 +117,6 @@ const seedData = async () => {
         password: await bcrypt.hash('Admin@123', 10),
         phone: '+1-800-ADMIN-2',
         position: 'Manager',
-        department: 'Operations',
         orgId: org2.id,
         roleId: adminRole.id,
         status: 'ACTIVE',
@@ -143,7 +140,6 @@ const seedData = async () => {
           password: await bcrypt.hash('Emp@1234', 10),
           phone: `+1-800-EMP-${1000 + i}`,
           position: 'Employee',
-          department: 'Engineering',
           orgId: org1.id,
           roleId: empRole.id,
           status: 'ACTIVE',
@@ -254,12 +250,7 @@ const seedData = async () => {
 
     // Create subscriptions for organizations
     await prisma.organizationSubscription.upsert({
-      where: {
-        orgId_planId: {
-          orgId: org1.id,
-          planId: proPlan.id,
-        },
-      },
+      where: { orgId: org1.id },
       update: {
         status: 'ACTIVE',
         startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
@@ -275,12 +266,7 @@ const seedData = async () => {
     })
 
     await prisma.organizationSubscription.upsert({
-      where: {
-        orgId_planId: {
-          orgId: org2.id,
-          planId: freePlan.id,
-        },
-      },
+      where: { orgId: org2.id },
       update: {
         status: 'ACTIVE',
         startDate: new Date(),

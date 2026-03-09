@@ -42,7 +42,6 @@ model Department {
   updatedAt     DateTime @default(now()) @updatedAt
 
   organization  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  users         User[]
 }
 
 model Shift {
@@ -56,7 +55,6 @@ model Shift {
   updatedAt     DateTime @default(now()) @updatedAt
 
   organization  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  users         User[]
 }
 
 model Role {
@@ -73,8 +71,6 @@ model User {
   password      String
   phone         String?
   position      String?
-  departmentId  String?
-  shiftId       String?
   orgId         String?
   roleId        String
   status        String   @default("ACTIVE") // ACTIVE, DISABLED, DELETED
@@ -85,8 +81,6 @@ model User {
 
   organization  Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
   role          Role           @relation(fields: [roleId], references: [id])
-  department    Department?    @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  shift         Shift?         @relation(fields: [shiftId], references: [id], onDelete: SetNull)
   attendance    Attendance[]
   auditLogsMade AuditLog[]      @relation("UserAuditLogs")
 }

@@ -13,7 +13,7 @@ const superAdminMiddleware = (req, res, next) => {
     }
 
     // Check if user has SuperAdmin role
-    if (req.user.role?.name !== 'SuperAdmin') {
+    if (req.user.role?.name !== 'Super_Admin') {
       return errorResponse(res, 'Forbidden: SuperAdmin access required', 403)
     }
 

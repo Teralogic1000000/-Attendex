@@ -1,10 +1,11 @@
+import supabase from '../config/supabaseClient.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
-import prisma from '../config/prisma.js'
+import { update } from '../config/supabaseMapper.js'
 import { successResponse, errorResponse } from '../utils/response.js'
 
 /**
  * Get the organization details for the currently authenticated user.
- * OrgAdmins and employees can fetch their own org info.
+ * Uses organization_full_view for readable data (type and region names)
  */
 export const getOrganizationInfo = asyncHandler(async (req, res) => {
   const orgId = req.user.orgId || req.user.organizationId
@@ -12,26 +13,20 @@ export const getOrganizationInfo = asyncHandler(async (req, res) => {
     return errorResponse(res, 'Organization not found on user', 400)
   }
 
-  const org = await prisma.organization.findUnique({
-    where: { id: orgId },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phone: true,
-      address: true,
-      logoUrl: true,
-      theme: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  })
+  // Use organization_full_view for readable data
+  const { data: org, error } = await supabase
+    .from('organization_full_view')
+    .select('*')
+    .eq('Org_ID', orgId)
+    .single()
 
-  if (!org) {
+  if (error || !org) {
     return errorResponse(res, 'Organization not found', 404)
   }
 
-  return successResponse(res, 'Organization fetched', { organization: org })
+  return successResponse(res, 'Organization fetched', {
+    organization: org
+  })
 })
 
 /**
@@ -46,19 +41,35 @@ export const updateOrganizationSettings = asyncHandler(async (req, res) => {
 
   const { name, email, phone, address, logoUrl, theme } = req.body
 
-  // build update data object, ignoring undefined fields
+  // Build update data object, ignoring undefined fields
   const updateData = {}
   if (name !== undefined) updateData.name = name
   if (email !== undefined) updateData.email = email
-  if (phone !== undefined) updateData.phone = phone
+  if (phone !== undefined) updateData.phoneNum = phone
   if (address !== undefined) updateData.address = address
   if (logoUrl !== undefined) updateData.logoUrl = logoUrl
   if (theme !== undefined) updateData.theme = theme
 
-  const updatedOrg = await prisma.organization.update({
-    where: { id: orgId },
-    data: updateData,
-  })
+  const { data: updatedOrg, error } = await supabase
+    .from('Organization')
+    .update(updateData)
+    .eq('id', orgId)
+    .select()
+    .single()
 
-  return successResponse(res, 'Organization updated', { organization: updatedOrg })
+  if (error) {
+    return errorResponse(res, error.message, 400)
+  }
+
+  return successResponse(res, 'Organization updated', {
+    organization: {
+      id: updatedOrg.id,
+      name: updatedOrg.name,
+      email: updatedOrg.email,
+      phone: updatedOrg.phone,
+      address: updatedOrg.address,
+      logoUrl: updatedOrg.logoUrl,
+      theme: updatedOrg.theme,
+    },
+  })
 })

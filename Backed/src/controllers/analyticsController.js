@@ -1,60 +1,71 @@
-import prisma from '../config/prisma.js'
+import { findMany } from '../config/supabaseMapper.js'
 import { successResponse } from '../utils/response.js'
 
 export const orgAnalytics = async (req, res) => {
-  const today = new Date();
-  today.setHours(0,0,0,0);
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
 
-  const startDate = new Date(today);
-  startDate.setDate(startDate.getDate() - 6); // last 7 days
+  const startDate = new Date(today)
+  startDate.setDate(startDate.getDate() - 6) // last 7 days
 
-  const grouped = await prisma.attendance.groupBy({
-    by: ['date'],
-    where: {
-      orgId: req.user.orgId,
-      date: {
-        gte: startDate,
-        lte: today
+  // Fetch all attendance records for the date range
+  const attendances = await findMany('attendance', { orgId: req.user.orgId }, { limit: 100000 })
+  
+  // Filter by date range
+  const filteredRecords = attendances.filter(record => {
+    const recordDate = new Date(record.checkInTime || record.createdAt)
+    recordDate.setHours(0, 0, 0, 0)
+    return recordDate >= startDate && recordDate <= today
+  })
+
+  // Group by date on client side
+  const map = {}
+  filteredRecords.forEach(record => {
+    const recordDate = new Date(record.checkInTime || record.createdAt)
+    recordDate.setHours(0, 0, 0, 0)
+    const key = recordDate.toISOString().slice(0, 10)
+    
+    if (!map[key]) {
+      map[key] = {
+        count: 0,
+        totalHours: 0,
+        recordCount: 0
       }
-    },
-    _count: {
-      id: true
-    },
-    _avg: {
-      totalHours: true
     }
-  });
+    
+    map[key].count += 1
+    map[key].totalHours += record.totalHours || 0
+    map[key].recordCount += 1
+  })
 
-  const map = {};
-  grouped.forEach(g => {
-    const d = new Date(g.date);
-    d.setHours(0,0,0,0);
-    map[d.toISOString().slice(0,10)] = {
-      count: g._count.id,
-      avgHours: g._avg.totalHours || 0
-    };
-  });
-
-  const days = [];
+  // Generate data for each day of the 7-day period
+  const days = []
   for (let i = 0; i < 7; i++) {
-    const d = new Date(startDate);
-    d.setDate(startDate.getDate() + i);
-    d.setHours(0,0,0,0);
-    const key = d.toISOString().slice(0,10);
+    const d = new Date(startDate)
+    d.setDate(startDate.getDate() + i)
+    d.setHours(0, 0, 0, 0)
+    const key = d.toISOString().slice(0, 10)
+    
+    const dayData = map[key] || { count: 0, totalHours: 0, recordCount: 0 }
+    const avgHours = dayData.recordCount > 0 
+      ? Number((dayData.totalHours / dayData.recordCount).toFixed(2))
+      : 0
+    
     days.push({
       date: key,
-      attendanceCount: map[key] ? map[key].count : 0,
-      avgHours: map[key] ? Number(map[key].avgHours.toFixed(2)) : 0
-    });
+      attendanceCount: dayData.count,
+      avgHours: avgHours
+    })
   }
 
-  const avgResult = await prisma.attendance.aggregate({
-    where: { orgId: req.user.orgId, date: { gte: startDate, lte: today } },
-    _avg: { totalHours: true }
-  });
+  // Calculate average hours for the 7-day period
+  const totalHours = filteredRecords.reduce((sum, r) => sum + (r.totalHours || 0), 0)
+  const avgHoursLast7 = filteredRecords.length > 0 
+    ? Number((totalHours / filteredRecords.length).toFixed(2))
+    : 0
 
   return successResponse(res, 'Analytics fetched', {
     weekly: days,
-    avgHoursLast7: avgResult._avg.totalHours || 0
-  });
+    avgHoursLast7: avgHoursLast7
+  })
 }

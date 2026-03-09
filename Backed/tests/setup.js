@@ -15,8 +15,8 @@ export async function setupTestDB() {
 
     // Create roles
     const roles = [
-      { name: 'SuperAdmin' },
-      { name: 'OrgAdmin' },
+      { name: 'Super_Admin' },
+      { name: 'Org_Admin' },
       { name: 'Employee' },
     ]
 
@@ -72,7 +72,7 @@ export async function setupTestDB() {
 
     // Create OrgAdmin role
     const orgAdminRole = await prisma.role.findUnique({
-      where: { name: 'OrgAdmin' },
+      where: { name: 'Org_Admin' },
     })
 
     // Create test admin user

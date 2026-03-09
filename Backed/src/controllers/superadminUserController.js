@@ -3,7 +3,7 @@
  * Handles user management across all organizations
  */
 
-import prisma from '../config/prisma.js'
+import { findMany, findOne, count, update, create, deleteById } from '../config/supabaseMapper.js'
 import bcrypt from 'bcrypt'
 import { successResponse, errorResponse } from '../utils/response.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
@@ -16,44 +16,52 @@ export const getAllUsers = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, status = 'ACTIVE', role, search } = req.query
   const skip = (page - 1) * limit
 
-  const where = {}
-  if (status) where.status = status
-  if (role) where.role = { name: role }
+  // Fetch all users with client-side filtering
+  const allUsers = await findMany('user', {}, { limit: 100000 })
+  let filtered = allUsers
+
+  if (status) {
+    filtered = filtered.filter(u => u.status === status)
+  }
+  if (role) {
+    filtered = filtered.filter(u => u.userTypeId === parseInt(role))
+  }
   if (search) {
-    where.OR = [
-      { firstName: { contains: search, mode: 'insensitive' } },
-      { lastName: { contains: search, mode: 'insensitive' } },
-      { email: { contains: search, mode: 'insensitive' } }
-    ]
+    const searchLower = search.toLowerCase()
+    filtered = filtered.filter(u =>
+      u.firstName?.toLowerCase().includes(searchLower) ||
+      u.surname?.toLowerCase().includes(searchLower) ||
+      u.email?.toLowerCase().includes(searchLower)
+    )
   }
 
-  const [users, total] = await Promise.all([
-    prisma.user.findMany({
-      where,
-      include: {
-        role: true,
-        organization: { select: { id: true, name: true } }
-      },
-      skip,
-      take: parseInt(limit),
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        status: true,
-        role: true,
-        organization: true,
-        lastLogin: true,
-        createdAt: true
+  const total = filtered.length
+  const users = filtered.slice(skip, skip + parseInt(limit))
+
+  // Enrich with organization details
+  const enriched = await Promise.all(
+    users.map(async (user) => {
+      const [org, userType] = await Promise.all([
+        findOne('organization', { id: user.orgId }),
+        findOne('user_type', { id: user.userTypeId })
+      ])
+
+      return {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.surname,
+        email: user.email,
+        status: user.status,
+        userType: userType?.typeName || 'Unknown',
+        organization: org ? { id: org.id, name: org.orgName } : null,
+        lastLogin: user.lastLogin,
+        createdAt: user.createdAt
       }
-    }),
-    prisma.user.count({ where })
-  ])
+    })
+  )
 
   return successResponse(res, 'Users fetched', {
-    data: users,
+    data: enriched,
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),
@@ -70,43 +78,42 @@ export const getAllUsers = asyncHandler(async (req, res) => {
 export const getUserDetail = asyncHandler(async (req, res) => {
   const { id } = req.params
 
-  const user = await prisma.user.findUnique({
-    where: { id },
-    include: {
-      role: true,
-      organization: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          status: true
-        }
-      },
-      attendance: { take: 5, orderBy: { date: 'desc' } }
-    },
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      email: true,
-      phone: true,
-      position: true,
-      department: true,
-      status: true,
-      lastLogin: true,
-      createdAt: true,
-      updatedAt: true,
-      role: true,
-      organization: true,
-      attendance: true
-    }
-  })
+  const user = await findOne('user', { id })
 
   if (!user) {
     return errorResponse(res, 'User not found', 404)
   }
 
-  return successResponse(res, 'User details fetched', user)
+  // Fetch related data
+  const [org, userType, recentAttendances] = await Promise.all([
+    findOne('organization', { id: user.orgId }),
+    findOne('user_type', { id: user.userTypeId }),
+    findMany('attendance', { userId: id }, { limit: 5 })
+  ])
+
+  const userDetail = {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.surname,
+    email: user.email,
+    phone: user.phoneNum,
+    position: user.position,
+    department: user.department,
+    status: user.status,
+    lastLogin: user.lastLogin,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+    userType: userType?.typeName || 'Unknown',
+    organization: org ? {
+      id: org.id,
+      name: org.orgName,
+      email: org.email,
+      status: org.status
+    } : null,
+    attendance: recentAttendances
+  }
+
+  return successResponse(res, 'User details fetched', userDetail)
 })
 
 /**
@@ -117,7 +124,7 @@ export const disableUser = asyncHandler(async (req, res) => {
   const { id } = req.params
   const { reason } = req.body
 
-  const user = await prisma.user.findUnique({ where: { id } })
+  const user = await findOne('user', { id })
   if (!user) {
     return errorResponse(res, 'User not found', 404)
   }
@@ -126,23 +133,18 @@ export const disableUser = asyncHandler(async (req, res) => {
     return errorResponse(res, 'User is already disabled', 400)
   }
 
-  const disabled = await prisma.user.update({
-    where: { id },
-    data: { status: 'DISABLED' }
-  })
+  const disabled = await update('user', id, { status: 'DISABLED' })
 
   // Log action
-  await prisma.auditLog.create({
-    data: {
-      action: 'DISABLE_USER',
-      resource: 'User',
-      resourceId: id,
-      userId: req.user.id,
-      orgId: user.orgId,
-      reason: reason || 'No reason provided',
-      ipAddress: req.ip
-    }
-  })
+  await create('audit_log', {
+    action: 'DISABLE_USER',
+    resource: 'User',
+    resourceId: id,
+    userId: req.user.id,
+    orgId: user.orgId,
+    reason: reason || 'No reason provided',
+    ipAddress: req.ip
+  }).catch(err => console.warn('Audit log creation failed:', err))
 
   return successResponse(res, 'User disabled', {
     id: disabled.id,
@@ -158,7 +160,7 @@ export const disableUser = asyncHandler(async (req, res) => {
 export const enableUser = asyncHandler(async (req, res) => {
   const { id } = req.params
 
-  const user = await prisma.user.findUnique({ where: { id } })
+  const user = await findOne('user', { id })
   if (!user) {
     return errorResponse(res, 'User not found', 404)
   }
@@ -167,23 +169,18 @@ export const enableUser = asyncHandler(async (req, res) => {
     return errorResponse(res, 'Only disabled users can be enabled', 400)
   }
 
-  const enabled = await prisma.user.update({
-    where: { id },
-    data: { status: 'ACTIVE' }
-  })
+  const enabled = await update('user', id, { status: 'ACTIVE' })
 
   // Log action
-  await prisma.auditLog.create({
-    data: {
-      action: 'ENABLE_USER',
-      resource: 'User',
-      resourceId: id,
-      userId: req.user.id,
-      orgId: user.orgId,
-      reason: 'User re-enabled',
-      ipAddress: req.ip
-    }
-  })
+  await create('audit_log', {
+    action: 'ENABLE_USER',
+    resource: 'User',
+    resourceId: id,
+    userId: req.user.id,
+    orgId: user.orgId,
+    reason: 'User re-enabled',
+    ipAddress: req.ip
+  }).catch(err => console.warn('Audit log creation failed:', err))
 
   return successResponse(res, 'User enabled', {
     id: enabled.id,
@@ -199,33 +196,27 @@ export const enableUser = asyncHandler(async (req, res) => {
 export const resetUserPassword = asyncHandler(async (req, res) => {
   const { id } = req.params
 
-  const user = await prisma.user.findUnique({ where: { id } })
+  const user = await findOne('user', { id })
   if (!user) {
     return errorResponse(res, 'User not found', 404)
   }
 
   // Generate temporary password
   const tempPassword = Math.random().toString(36).slice(-12)
-  const bcrypt = await import('bcryptjs')
-  const hashedPassword = await bcrypt.default.hash(tempPassword, 10)
+  const hashedPassword = await bcrypt.hash(tempPassword, 10)
 
-  const updated = await prisma.user.update({
-    where: { id },
-    data: { password: hashedPassword }
-  })
+  const updated = await update('user', id, { password: hashedPassword })
 
   // Log action
-  await prisma.auditLog.create({
-    data: {
-      action: 'RESET_PASSWORD',
-      resource: 'User',
-      resourceId: id,
-      userId: req.user.id,
-      orgId: user.orgId,
-      reason: 'Password reset by SuperAdmin',
-      ipAddress: req.ip
-    }
-  })
+  await create('audit_log', {
+    action: 'RESET_PASSWORD',
+    resource: 'User',
+    resourceId: id,
+    userId: req.user.id,
+    orgId: user.orgId,
+    reason: 'Password reset by SuperAdmin',
+    ipAddress: req.ip
+  }).catch(err => console.warn('Audit log creation failed:', err))
 
   return successResponse(res, 'Password reset successfully', {
     email: updated.email,
@@ -248,62 +239,56 @@ export const createUserInOrg = asyncHandler(async (req, res) => {
   }
 
   // Check org exists
-  const org = await prisma.organization.findUnique({ where: { id: orgId } })
+  const org = await findOne('organization', { id: orgId })
   if (!org) {
     return errorResponse(res, 'Organization not found', 404)
   }
 
   // Check email uniqueness
-  const existingUser = await prisma.user.findUnique({ where: { email } })
+  const existingUser = await findOne('user', { email })
   if (existingUser) {
     return errorResponse(res, 'Email already in use', 400)
   }
 
-  // Get role
-  const roleRecord = await prisma.role.findUnique({ where: { name: role } })
-  if (!roleRecord) {
-    return errorResponse(res, 'Role not found', 404)
+  // Get user type by name (assuming role is passed as type name)
+  const userType = await findOne('user_type', { typeName: role })
+  if (!userType) {
+    return errorResponse(res, 'User type not found', 404)
   }
 
   // Hash password
-  const bcrypt = await import('bcryptjs')
-  const hashedPassword = await bcrypt.default.hash(password, 10)
+  const hashedPassword = await bcrypt.hash(password, 10)
 
-  const user = await prisma.user.create({
-    data: {
-      firstName,
-      lastName,
-      email,
-      password: hashedPassword,
-      orgId,
-      roleId: roleRecord.id,
-      position,
-      department,
-      status: 'ACTIVE'
-    },
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      email: true,
-      role: true,
-      position: true,
-      department: true
-    }
+  const user = await create('user', {
+    firstName,
+    surname: lastName,
+    email,
+    password: hashedPassword,
+    orgId,
+    userTypeId: userType.id,
+    position,
+    department,
+    status: 'ACTIVE'
   })
 
   // Log action
-  await prisma.auditLog.create({
-    data: {
-      action: 'CREATE_USER',
-      resource: 'User',
-      resourceId: user.id,
-      userId: req.user.id,
-      orgId,
-      reason: `Created user: ${email}`,
-      ipAddress: req.ip
-    }
-  })
+  await create('audit_log', {
+    action: 'CREATE_USER',
+    resource: 'User',
+    resourceId: user.id,
+    userId: req.user.id,
+    orgId,
+    reason: `Created user: ${email}`,
+    ipAddress: req.ip
+  }).catch(err => console.warn('Audit log creation failed:', err))
 
-  return successResponse(res, 'User created successfully', user, 201)
+  return successResponse(res, 'User created successfully', {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.surname,
+    email: user.email,
+    userType: role,
+    position: user.position,
+    department: user.department
+  }, 201)
 })

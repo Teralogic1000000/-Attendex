@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:3000/api';
+const BASE_URL = 'http://localhost:5000/api';
 
 // Test org admin - adjust with your test data
 const TEST_ORG_EMAIL = 'admin@testorg.com';

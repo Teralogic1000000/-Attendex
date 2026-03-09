@@ -4,8 +4,8 @@ export async function ensureDefaults() {
   // make sure essential reference data exists so registrations won't blow up
   await prisma.role.createMany({
     data: [
-      { name: 'SuperAdmin' },
-      { name: 'OrgAdmin' },
+      { name: 'Super_Admin' },
+      { name: 'Org_Admin' },
       { name: 'Employee' }
     ],
     skipDuplicates: true

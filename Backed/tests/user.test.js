@@ -18,7 +18,7 @@ describe('User Controller', () => {
       {
         id: testData.admin.id,
         orgId: testData.org.id,
-        role: 'OrgAdmin',
+        role: 'Org_Admin',
       },
       process.env.JWT_SECRET || 'test-secret',
       { expiresIn: '15m' }

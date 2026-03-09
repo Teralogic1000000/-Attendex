@@ -3,7 +3,7 @@
 # Attendex API Testing Script
 # Run all endpoints in sequence
 
-BASE_URL="http://localhost:3000/api"
+BASE_URL="http://localhost:5000/api"
 BLUE='\033[0;34m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'

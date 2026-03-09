@@ -1,7 +1,7 @@
 # Attendex API Testing Script (PowerShell)
 # Run all endpoints in sequence
 
-$BaseUrl = "http://localhost:3000/api"
+$BaseUrl = "http://localhost:5000/api"
 $timestamp = Get-Date -Format "yyyyMMddHHmmss"
 
 Write-Host "========================================" -ForegroundColor Blue

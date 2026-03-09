@@ -1,5 +1,13 @@
 import bcrypt from 'bcrypt';
-import prisma from '../config/prisma.js';
+import {
+  findOne,
+  create,
+  update,
+  findMany,
+  camelToSnakeCase,
+  snakeToCamelCase,
+} from '../config/supabaseMapper.js';
+import supabase from '../config/supabaseClient.js';
 import jwt from 'jsonwebtoken';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { successResponse, errorResponse } from '../utils/response.js';
@@ -18,9 +26,7 @@ export const register = asyncHandler(async (req, res) => {
   }
 
   // Check if email already exists
-  const existingUser = await prisma.user.findUnique({
-    where: { email }
-  });
+  const existingUser = await findOne('user', { email });
 
   if (existingUser) {
     return errorResponse(res, 'Email already in use', 400);
@@ -30,54 +36,52 @@ export const register = asyncHandler(async (req, res) => {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   // Create organization
-  const organization = await prisma.organization.create({
-    data: { name: orgName, logoUrl, theme }
+  const organization = await create('organization', {
+    name: orgName,
+    logoUrl,
+    theme
   });
 
-  // Get or create OrgAdmin role
-  let role = await prisma.role.findUnique({
-    where: { name: 'OrgAdmin' }
-  });
+  // Get OrgAdmin user type (assuming user_type_id = 3 for OrgAdmin, or query it)
+  let userType = await findOne('user_type', { typeName: 'OrgAdmin' });
 
-  if (!role) {
-    role = await prisma.role.create({
-      data: { name: 'OrgAdmin' }
-    });
+  if (!userType) {
+    // Fallback to first available user type or default to 1
+    userType = await findOne('user_type', {});
+    if (!userType) {
+      // Create OrgAdmin user type if it doesn't exist
+      userType = await create('user_type', {
+        typeName: 'OrgAdmin'
+      });
+    }
   }
 
   // Create user
-  const user = await prisma.user.create({
-    data: {
-      firstName,
-      lastName,
-      email,
-      password: hashedPassword,
-      orgId: organization.id,
-      roleId: role.id
-    },
-    include: { role: true, organization: true }
+  const user = await create('user', {
+    firstName,
+    lastName,
+    email,
+    password: hashedPassword,
+    orgId: organization.id,
+    userTypeId: userType.id
   });
 
-  // Get Basic plan (seed may not have been run)
-  let basicPlan = await prisma.subscriptionPlan.findUnique({
-    where: { name: 'Basic' }
-  });
+  // Get Basic plan
+  let basicPlan = await findOne('subscriptionPlan', { name: 'Basic' });
 
   if (!basicPlan) {
-    // create a minimal default plan so registration can succeed
-    basicPlan = await prisma.subscriptionPlan.create({
-      data: {
-        name: 'Basic',
-        maxEmployees: 5,
-        price: 0,
-        interval: 'monthly',
-        features: [
-          'Limited features',
-          'Core system access',
-          'Up to 5 team members',
-          'Basic support'
-        ]
-      }
+    // Create Basic plan if it doesn't exist
+    basicPlan = await create('subscriptionPlan', {
+      name: 'Basic',
+      maxEmployees: 5,
+      price: 0,
+      interval: 'monthly',
+      features: [
+        'Limited features',
+        'Core system access',
+        'Up to 5 team members',
+        'Basic support'
+      ]
     });
   }
 
@@ -85,25 +89,19 @@ export const register = asyncHandler(async (req, res) => {
   const endDate = new Date();
   endDate.setDate(endDate.getDate() + 30); // 30 days trial
 
-  const subscription = await prisma.organizationSubscription.create({
-    data: {
-      orgId: organization.id,
-      planId: basicPlan.id,
-      startDate: new Date(),
-      endDate,
-      status: SUBSCRIPTION_STATUS.ACTIVE
-    },
-    include: { plan: true }
+  const subscription = await create('organizationSubscription', {
+    orgId: organization.id,
+    planId: basicPlan.id,
+    startDate: new Date(),
+    endDate,
+    status: SUBSCRIPTION_STATUS.ACTIVE || 'ACTIVE'
   });
 
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
 
   // Store refresh token
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { refreshToken }
-  });
+  await update('user', user.id, { refreshToken }, 'id');
 
   return successResponse(res, 'Registration successful', {
     user: {
@@ -111,12 +109,12 @@ export const register = asyncHandler(async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
-      role: user.role.name,
+      userType: userType.typeName,
       orgId: organization.id
     },
     subscription: {
-      plan: subscription.plan.name,
-      maxEmployees: subscription.plan.maxEmployees,
+      plan: basicPlan.name,
+      maxEmployees: basicPlan.maxEmployees,
       startDate: subscription.startDate,
       endDate: subscription.endDate
     },
@@ -137,20 +135,8 @@ export const login = asyncHandler(async (req, res) => {
     return errorResponse(res, 'Email and password are required', 400);
   }
 
-  // Find user with relations
-  const user = await prisma.user.findUnique({
-    where: { email },
-    include: {
-      role: true,
-      organization: {
-        include: {
-          subscription: {
-            include: { plan: true }
-          }
-        }
-      }
-    }
-  });
+  // Find user
+  const user = await findOne('user', { email });
 
   if (!user) {
     return errorResponse(res, 'Invalid credentials', 401);
@@ -162,43 +148,56 @@ export const login = asyncHandler(async (req, res) => {
     return errorResponse(res, 'Invalid credentials', 401);
   }
 
+  // Get user type info
+  const userType = user.userTypeId ? await findOne('user_type', { id: user.userTypeId }) : null;
+
+  // Get organization info
+  const organization = user.orgId ? await findOne('organization', { id: user.orgId }) : null;
+
+  // Get subscription info
+  let subscription = null;
+  if (user.orgId) {
+    subscription = await findOne('organizationSubscription', { orgId: user.orgId });
+    if (subscription) {
+      const plan = await findOne('subscriptionPlan', { id: subscription.planId });
+      subscription.plan = plan;
+    }
+  }
+
   // Generate tokens
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
 
   // Update refresh token in database
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { refreshToken }
-  });
+  await update('user', user.id, { refreshToken }, 'id');
 
-  // build user response including organization info (logo/theme)
+  // Build user response
   const resUser = {
     id: user.id,
     firstName: user.firstName,
     lastName: user.lastName,
     email: user.email,
-    role: user.role.name,
+    userType: userType?.typeName || 'Employee',
     orgId: user.orgId,
-  }
+  };
 
-  if (user.organization) {
+  if (organization) {
     resUser.organization = {
-      id: user.organization.id,
-      name: user.organization.name,
-      email: user.organization.email,
-      logoUrl: user.organization.logoUrl,
-      theme: user.organization.theme,
-    }
+      id: organization.id,
+      name: organization.name,
+      email: organization.email,
+      logoUrl: organization.logoUrl,
+      theme: organization.theme,
+    };
   }
 
   return successResponse(res, 'Login successful', {
     user: resUser,
-    subscription: user.organization?.subscription ? {
-      plan: user.organization.subscription.plan.name,
-      maxEmployees: user.organization.subscription.plan.maxEmployees,
-      status: user.organization.subscription.status,
-      endDate: user.organization.subscription.endDate
+    subscription: subscription ? {
+      plan: subscription.plan?.name,
+      maxEmployees: subscription.plan?.maxEmployees,
+      status: subscription.status,
+      endDate: subscription.endDate
     } : null,
     tokens: {
       accessToken,
@@ -220,10 +219,7 @@ export const refresh = asyncHandler(async (req, res) => {
   try {
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      include: { role: true }
-    });
+    const user = await findOne('user', { id: decoded.id });
 
     if (!user || user.refreshToken !== refreshToken) {
       return errorResponse(res, 'Invalid refresh token', 401);
@@ -233,10 +229,7 @@ export const refresh = asyncHandler(async (req, res) => {
     const newRefreshToken = generateRefreshToken(user);
 
     // Update refresh token
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { refreshToken: newRefreshToken }
-    });
+    await update('user', user.id, { refreshToken: newRefreshToken }, 'id');
 
     return successResponse(res, 'Token refreshed', {
       accessToken: newAccessToken,
@@ -257,10 +250,7 @@ export const logout = asyncHandler(async (req, res) => {
     return errorResponse(res, 'User not authenticated', 401);
   }
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { refreshToken: null }
-  });
+  await update('user', userId, { refreshToken: null }, 'id');
 
   return successResponse(res, 'Logged out successfully');
 });
