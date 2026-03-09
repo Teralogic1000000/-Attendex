@@ -17,6 +17,6 @@ import { Inbox } from 'lucide-vue-next'
 defineProps({
   title: { type: String, default: 'No data found' },
   description: { type: String, default: 'There are no records to display at this time.' },
-  icon: { type: Object, default: () => Inbox },
+  icon: { type: [Object, Function], default: () => Inbox },
 })
 </script>

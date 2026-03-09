@@ -10,14 +10,17 @@
 <script setup>
 import { ref } from 'vue'
 import AppSidebar from '@/components/common/AppSidebar.vue'
-import { BarChart3, Building2, Layers, ScrollText } from 'lucide-vue-next'
+import { LayoutDashboard, Building2, TrendingUp, BarChart3, Activity, AlertCircle, Settings } from 'lucide-vue-next'
 
 const collapsed = ref(false)
 
 const navItems = [
-  { to: '/superadmin/overview', label: 'Overview', icon: BarChart3 },
+  { to: '/superadmin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/superadmin/organizations', label: 'Organizations', icon: Building2 },
-  { to: '/superadmin/plans', label: 'Plans', icon: Layers },
-  { to: '/superadmin/logs', label: 'System Logs', icon: ScrollText },
+  { to: '/superadmin/revenue', label: 'Revenue', icon: TrendingUp },
+  { to: '/superadmin/analytics', label: 'Analytics', icon: BarChart3 },
+  { to: '/superadmin/monitoring', label: 'Monitoring', icon: Activity },
+  { to: '/superadmin/audit-logs', label: 'Audit Logs', icon: AlertCircle },
+  { to: '/superadmin/settings', label: 'Settings', icon: Settings },
 ]
 </script>

@@ -1,115 +1,15 @@
 <template>
-  <div class="flex h-screen bg-gray-50">
-    <!-- Sidebar -->
-    <div :class="['fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0', sidebarOpen ? 'translate-x-0' : '-translate-x-full']">
-      <div class="flex items-center justify-center h-16 px-4 bg-primary-600">
-        <h1 class="text-xl font-bold text-white">Attendex</h1>
-      </div>
-      <nav class="mt-8">
-        <div class="px-4">
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Dashboard</p>
-          <ul class="mt-2 space-y-1">
-            <li>
-              <a href="#" class="flex items-center px-4 py-2 text-sm font-medium text-primary-600 bg-primary-50 rounded-lg">
-                <Home class="w-5 h-5 mr-3" />
-                Overview
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div class="px-4 mt-8">
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Management</p>
-          <ul class="mt-2 space-y-1">
-            <li>
-              <router-link to="/admin/users" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg">
-                <Users class="w-5 h-5 mr-3" />
-                Employees
-              </router-link>
-            </li>
-            <li>
-              <router-link to="/admin/attendance" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg">
-                <Calendar class="w-5 h-5 mr-3" />
-                Attendance
-              </router-link>
-            </li>
-            <li>
-              <router-link to="/admin/reports" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg">
-                <BarChart3 class="w-5 h-5 mr-3" />
-                Reports
-              </router-link>
-            </li>
-          </ul>
-        </div>
-        <div class="px-4 mt-8">
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Settings</p>
-          <ul class="mt-2 space-y-1">
-            <li>
-              <router-link to="/admin/settings" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg">
-                <Settings class="w-5 h-5 mr-3" />
-                Organization
-              </router-link>
-            </li>
-            <li>
-              <router-link to="/admin/subscription" class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg">
-                <CreditCard class="w-5 h-5 mr-3" />
-                Subscription
-              </router-link>
-            </li>
-          </ul>
-        </div>
-      </nav>
+  <div class="w-full">
+    <!-- Greeting Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900">Welcome back, {{ userFirstName }}! 👋</h1>
+      <p class="text-gray-600 mt-2">{{ orgName }} • {{ new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}</p>
     </div>
 
-    <!-- Main Content -->
-    <div class="flex-1 flex flex-col overflow-hidden">
-      <!-- Top Navigation -->
-      <header class="bg-white shadow-sm border-b border-gray-200">
-        <div class="flex items-center justify-between px-6 py-4">
-          <div class="flex items-center">
-            <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100">
-              <Menu class="w-6 h-6" />
-            </button>
-            <div class="ml-4 lg:ml-0">
-              <h2 class="text-lg font-semibold text-gray-900">{{ orgName }}</h2>
-              <p class="text-sm text-gray-500">Organization Dashboard</p>
-            </div>
-          </div>
-          <div class="flex items-center space-x-4">
-            <!-- Subscription Status -->
-            <div class="hidden md:flex items-center px-3 py-1 rounded-full text-sm font-medium bg-accent-100 text-accent-800">
-              <Crown class="w-4 h-4 mr-1" />
-              {{ stats.planName }}
-            </div>
-            <!-- Notifications -->
-            <div class="relative">
-              <button class="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100">
-                <Bell class="w-6 h-6" />
-              </button>
-              <span class="absolute top-0 right-0 block h-2 w-2 rounded-full bg-danger-400 ring-2 ring-white"></span>
-            </div>
-            <!-- Profile Menu -->
-            <div class="relative">
-              <button @click="profileMenuOpen = !profileMenuOpen" class="flex items-center space-x-2 p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100">
-                <div class="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center text-white font-medium">
-                  {{ userInitials }}
-                </div>
-                <ChevronDown class="w-4 h-4" />
-              </button>
-              <div v-if="profileMenuOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
-                <router-link to="/admin/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</router-link>
-                <router-link to="/admin/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</router-link>
-                <a href="#" @click="logout" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign out</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <!-- Dashboard Content -->
-      <main class="flex-1 overflow-y-auto p-6">
-        <div class="max-w-7xl mx-auto space-y-6">
-          <!-- KPI Cards -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+    <!-- Dashboard Content -->
+    <div class="space-y-6">
+      <!-- KPI Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div class="flex items-center">
                 <div class="p-2 bg-primary-100 rounded-lg">
@@ -222,19 +122,19 @@
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
               <div class="space-y-3">
-                <button class="w-full flex items-center justify-center px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                <button @click="showAddEmployeeModal = true" class="w-full flex items-center justify-center px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
                   <UserPlus class="w-5 h-5 mr-2" />
                   Add Employee
                 </button>
-                <button class="w-full flex items-center justify-center px-4 py-3 bg-accent-600 text-white rounded-lg hover:bg-accent-700 transition-colors">
+                <button @click="generateReport" class="w-full flex items-center justify-center px-4 py-3 bg-accent-600 text-white rounded-lg hover:bg-accent-700 transition-colors">
                   <FileText class="w-5 h-5 mr-2" />
                   Generate Report
                 </button>
-                <button class="w-full flex items-center justify-center px-4 py-3 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors">
+                <button @click="createQRCode" class="w-full flex items-center justify-center px-4 py-3 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors">
                   <QrCode class="w-5 h-5 mr-2" />
                   Create QR Code
                 </button>
-                <button class="w-full flex items-center justify-center px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                <button @click="createGeofence" class="w-full flex items-center justify-center px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
                   <MapPin class="w-5 h-5 mr-2" />
                   Create Geofence
                 </button>
@@ -242,12 +142,129 @@
             </div>
           </div>
         </div>
-      </main>
     </div>
 
-    <!-- Mobile Overlay -->
-    <div v-if="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"></div>
-  </div>
+    <!-- Add Employee Modal -->
+    <div v-if="showAddEmployeeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <!-- Modal Header -->
+        <div class="sticky top-0 bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-4 flex items-center justify-between">
+          <h2 class="text-xl font-bold text-white">Add New Employee</h2>
+          <button @click="showAddEmployeeModal = false" class="text-white hover:text-primary-100">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Modal Body -->
+        <form @submit.prevent="handleAddEmployee" class="p-6 space-y-4">
+          <!-- First Name -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+            <input
+              v-model="newEmployee.firstName"
+              type="text"
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              placeholder="John"
+            />
+          </div>
+
+          <!-- Last Name -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+            <input
+              v-model="newEmployee.lastName"
+              type="text"
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              placeholder="Doe"
+            />
+          </div>
+
+          <!-- Email -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              v-model="newEmployee.email"
+              type="email"
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              placeholder="john@example.com"
+            />
+          </div>
+
+          <!-- Phone -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+            <input
+              v-model="newEmployee.phone"
+              type="tel"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              placeholder="+1 (555) 000-0000"
+            />
+          </div>
+
+          <!-- Department -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+            <input
+              v-model="newEmployee.department"
+              type="text"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              placeholder="Sales"
+            />
+          </div>
+
+          <!-- Position -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Position</label>
+            <input
+              v-model="newEmployee.position"
+              type="text"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              placeholder="Manager"
+            />
+          </div>
+
+          <!-- Error Message -->
+          <div v-if="employeeError" class="p-3 bg-danger-50 border border-danger-200 text-danger-700 rounded-lg text-sm">
+            {{ employeeError }}
+          </div>
+
+          <!-- Success Message -->
+          <div v-if="employeeSuccess" class="p-3 bg-accent-50 border border-accent-200 text-accent-700 rounded-lg text-sm">
+            {{ employeeSuccess }}
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="flex gap-3 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              @click="showAddEmployeeModal = false"
+              class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              :disabled="employeeLoading"
+              class="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-primary-400 transition-colors font-medium flex items-center justify-center"
+            >
+              <span v-if="!employeeLoading">Add Employee</span>
+              <span v-else class="flex items-center">
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Adding...
+              </span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 </template>
 
 <script setup>
@@ -263,10 +280,10 @@ import {
   Title,
   Tooltip,
   Legend,
+  Filler,
 } from 'chart.js'
 import { useUserStore } from '@/stores/user'
 import { useAttendanceStore } from '@/stores/attendance'
-import { useSubscriptionStore } from '@/stores/subscription'
 import { formatNumber, timeAgo } from '@/utils/helpers'
 import {
   Users,
@@ -274,12 +291,7 @@ import {
   UserX,
   Clock,
   Briefcase,
-  Home,
   Calendar,
-  BarChart3,
-  Settings,
-  CreditCard,
-  Menu,
   Bell,
   ChevronDown,
   Crown,
@@ -299,17 +311,31 @@ ChartJS.register(
   PointElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  Filler
 )
 
 const userStore = useUserStore()
 const attendanceStore = useAttendanceStore()
-const subscriptionStore = useSubscriptionStore()
 const authStore = useAuthStore()
 
-const sidebarOpen = ref(false)
 const profileMenuOpen = ref(false)
 const chartReady = ref(false)
+
+// Add Employee Modal State
+const showAddEmployeeModal = ref(false)
+const employeeLoading = ref(false)
+const employeeError = ref('')
+const employeeSuccess = ref('')
+
+const newEmployee = ref({
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  department: '',
+  position: '',
+})
 
 const orgName = computed(() => {
   return authStore.user?.organization?.name || 'Organization'
@@ -321,6 +347,10 @@ const userInitials = computed(() => {
     return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
   }
   return user?.email?.[0]?.toUpperCase() || 'U'
+})
+
+const userFirstName = computed(() => {
+  return authStore.user?.firstName || 'User'
 })
 
 const stats = ref({
@@ -408,11 +438,85 @@ const logout = () => {
   authStore.logout()
 }
 
+const handleAddEmployee = async () => {
+  try {
+    employeeError.value = ''
+    employeeSuccess.value = ''
+    employeeLoading.value = true
+
+    // Prepare employee data
+    const employeeData = {
+      firstName: newEmployee.value.firstName,
+      lastName: newEmployee.value.lastName,
+      email: newEmployee.value.email,
+      phone: newEmployee.value.phone || null,
+      userType: 'Employee',
+    }
+
+    // Call backend to create employee
+    const response = await fetch('/api/auth/register/employee', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authStore.accessToken}`
+      },
+      body: JSON.stringify(employeeData)
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to add employee')
+    }
+
+    // Show success and reset form
+    employeeSuccess.value = `${newEmployee.value.firstName} has been added successfully!`
+    
+    // Reset form
+    newEmployee.value = {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      department: '',
+      position: '',
+    }
+
+    // Close modal after 2 seconds
+    setTimeout(() => {
+      showAddEmployeeModal.value = false
+      employeeSuccess.value = ''
+    }, 2000)
+
+    // Refresh employee list
+    await userStore.fetchStats()
+  } catch (error) {
+    employeeError.value = error.message || 'An error occurred while adding the employee'
+    console.error('Add employee error:', error)
+  } finally {
+    employeeLoading.value = false
+  }
+}
+
+const generateReport = () => {
+  console.log('Generating report...')
+  // TODO: Implement report generation
+}
+
+const createQRCode = () => {
+  console.log('Creating QR Code...')
+  // TODO: Implement QR code creation
+}
+
+const createGeofence = () => {
+  console.log('Creating geofence...')
+  // TODO: Implement geofence creation
+}
+
 onMounted(async () => {
   try {
-    const [userStatsData, subData, attendanceData] = await Promise.allSettled([
+    const [userStatsData, attendanceData] = await Promise.allSettled([
       userStore.fetchStats(),
-      subscriptionStore.fetchCurrentSubscription(),
       attendanceStore.fetchOrgAttendance(),
     ])
 
@@ -425,10 +529,9 @@ onMounted(async () => {
       stats.value.avgHours = userStatsData.value.avgHours || '0.0'
     }
 
-    if (subData.status === 'fulfilled' && subscriptionStore.currentSubscription) {
-      stats.value.planName = subscriptionStore.currentSubscription.planName || subscriptionStore.currentSubscription.name || 'Free'
-      stats.value.planStatus = subscriptionStore.currentSubscription.status || 'Active'
-    }
+    // All organizations have Free plan by default
+    stats.value.planName = 'Free'
+    stats.value.planStatus = 'Active'
 
     // Populate recent activity from org attendance
     if (attendanceStore.orgAttendance && attendanceStore.orgAttendance.length > 0) {

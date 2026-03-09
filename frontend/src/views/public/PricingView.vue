@@ -2,7 +2,9 @@
   <div>
     <!-- Hero -->
     <section class="relative overflow-hidden bg-gradient-to-br from-black via-orange-950/50 to-black py-24 lg:py-32">
-      <div class="mx-auto max-w-7xl px-6">
+      <!-- Background SVG Pattern -->
+      <div class="absolute inset-0 opacity-20" style="background-image: url('data:image/svg+xml,%3Csvg width=%22100%22 height=%22100%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cdefs%3E%3Cpattern id=%22grid%22 width=%22100%22 height=%22100%22 patternUnits=%22userSpaceOnUse%22%3E%3Cpath d=%22M 100 0 L 0 0 0 100%22 fill=%22none%22 stroke=%22%23000000%22 stroke-width=%220.5%22/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23ff6600%22/%3E%3Crect width=%22100%22 height=%22100%22 fill=%22url(%23grid)%22 /%3E%3C/svg%3E'); z-index: 0;" />
+      <div class="mx-auto max-w-7xl px-6 relative z-10">
         <div class="mx-auto max-w-2xl text-center">
           <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl text-balance">
             Simple, Transparent Pricing

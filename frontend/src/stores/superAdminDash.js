@@ -54,7 +54,7 @@ export const useSuperAdminStore = defineStore('superAdminDash', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await api.get('/superadmin/system/overview')
+      const response = await api.get('/superadmin/dashboard/overview')
       systemOverview.value = response.data.data
       return response.data.data
     } catch (err) {
@@ -69,8 +69,8 @@ export const useSuperAdminStore = defineStore('superAdminDash', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await api.get('/superadmin/system/analytics', {
-        params: { period }
+      const response = await api.get('/superadmin/dashboard/analytics/organization-growth', {
+        params: { days: period }
       })
       systemAnalytics.value = response.data.data
       return response.data.data
@@ -86,10 +86,10 @@ export const useSuperAdminStore = defineStore('superAdminDash', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await api.get('/superadmin/system/audit-logs', {
+      const response = await api.get('/superadmin/audit-logs', {
         params: { page, limit }
       })
-      auditLogs.value = response.data.data.data
+      auditLogs.value = response.data.data || response.data.data?.data || []
       return response.data.data
     } catch (err) {
       error.value = err.message
@@ -103,7 +103,7 @@ export const useSuperAdminStore = defineStore('superAdminDash', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await api.get('/superadmin/billing/overview')
+      const response = await api.get('/superadmin/subscription-plans')
       billingOverview.value = response.data.data
       return response.data.data
     } catch (err) {

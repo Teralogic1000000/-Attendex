@@ -15,6 +15,7 @@ export const useAuthStore = defineStore('auth', () => {
     return `${user.value.firstName || ''} ${user.value.lastName || ''}`.trim()
   })
   const dashboardRoute = computed(() => {
+    if (!userRole.value) return '/login'
     return ROLE_DASHBOARDS[userRole.value] || '/login'
   })
 
@@ -33,6 +34,16 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function register(formData) {
     const data = await authService.register(formData)
+    return data
+  }
+
+  async function registerOrganization(formData) {
+    const data = await authService.registerOrganization(formData)
+    return data
+  }
+
+  async function registerSuperAdmin(formData) {
+    const data = await authService.registerSuperAdmin(formData)
     return data
   }
 
@@ -84,6 +95,8 @@ export const useAuthStore = defineStore('auth', () => {
     dashboardRoute,
     login,
     register,
+    registerOrganization,
+    registerSuperAdmin,
     refreshAccessToken,
     logout,
     checkAuth,

@@ -166,6 +166,9 @@
           <a href="#" class="text-slate-400 hover:text-orange-400 text-sm transition-colors duration-200">
             API Docs
           </a>
+          <router-link to="/register?admin=true" class="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-lg transition-colors duration-200">
+            Admin
+          </router-link>
         </div>
       </div>
     </div>

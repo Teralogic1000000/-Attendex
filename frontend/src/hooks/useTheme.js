@@ -83,7 +83,7 @@ export function useTheme() {
    */
   function getDashboardColor(userRole) {
     const colorMap = {
-      'super-admin': { primary: '#9333ea', secondary: '#fbbf24' }, // Purple + Gold
+      'super-admin': { primary: '#22c55e', secondary: '#fbbf24' }, // Green + Gold
       'org-admin': { primary: '#0ea5e9', secondary: '#64748b' }, // Sky + Slate
       'employee': { primary: '#10b981', secondary: '#94a3b8' }, // Emerald + Slate
     }

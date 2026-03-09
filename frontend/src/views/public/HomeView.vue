@@ -2,10 +2,22 @@
   <div>
     <!-- Hero Section with Background -->
     <section class="relative overflow-hidden bg-black py-24 lg:py-32">
-      <!-- Background Image with Overlay -->
+      <!-- Video Background -->
+      <video
+        ref="videoRef"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="auto"
+        class="absolute inset-0 w-full h-full object-cover"
+      >
+        <source src="/login-bg.mp4" type="video/mp4" />
+      </video>
+
+      <!-- Background Overlay -->
       <div
-        class="absolute inset-0 bg-gradient-to-br from-black via-orange-950/50 to-black z-0"
-        style="background-image: url('data:image/svg+xml,%3Csvg width=%22100%22 height=%22100%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cdefs%3E%3Cpattern id=%22grid%22 width=%22100%22 height=%22100%22 patternUnits=%22userSpaceOnUse%22%3E%3Cpath d=%22M 100 0 L 0 0 0 100%22 fill=%22none%22 stroke=%22%23ff6600%22 stroke-width=%220.5%22 opacity=%220.1%22/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23000000%22/%3E%3Crect width=%22100%22 height=%22100%22 fill=%22url(%23grid)%22 /%3E%3C/svg%3E'); background-size: 100px 100px;"
+        class="absolute inset-0 bg-gradient-to-br from-black via-orange-950/50 to-black z-1"
       />
 
       <!-- Animated Background Elements -->
@@ -169,10 +181,22 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
 import {
   Clock, Users, BarChart3, Shield, Zap, Globe,
   ArrowRight, Sparkles,
 } from 'lucide-vue-next'
+
+const videoRef = ref(null)
+
+onMounted(() => {
+  if (videoRef.value) {
+    videoRef.value.play().catch(() => {
+      // Handle autoplay policy restrictions
+      console.log('Video autoplay failed - user interaction may be required')
+    })
+  }
+})
 
 const features = [
   {

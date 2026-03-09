@@ -9,6 +9,14 @@ export default {
     return api.post('/auth/register', data).then((res) => res.data.data)
   },
 
+  registerOrganization(data) {
+    return api.post('/auth/register/organization', data).then((res) => res.data.data)
+  },
+
+  registerSuperAdmin(data) {
+    return api.post('/auth/register/superadmin', data).then((res) => res.data.data)
+  },
+
   // backend currently exposes `/api/auth/refresh`
   // (authRoutes.js defines router.post('/refresh', ...))
   refreshToken(refreshToken) {

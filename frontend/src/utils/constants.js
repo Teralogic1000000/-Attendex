@@ -1,13 +1,19 @@
 export const ROLES = {
-  SUPER_ADMIN: 'SuperAdmin',
-  ORG_ADMIN: 'OrgAdmin',
+  SUPER_ADMIN: 'Super_Admin',
+  ORG_ADMIN: 'Org_Admin',
+  MANAGER: 'Manager',
   EMPLOYEE: 'Employee',
+  CONTRACTOR: 'Contractor',
+  INTERN: 'Intern',
 }
 
 export const ROLE_DASHBOARDS = {
   [ROLES.SUPER_ADMIN]: '/superadmin/dashboard',
   [ROLES.ORG_ADMIN]: '/admin/dashboard',
+  [ROLES.MANAGER]: '/admin/dashboard',
   [ROLES.EMPLOYEE]: '/employee/dashboard',
+  [ROLES.CONTRACTOR]: '/employee/dashboard',
+  [ROLES.INTERN]: '/employee/dashboard',
 }
 
 export const ATTENDANCE_STATUS = {

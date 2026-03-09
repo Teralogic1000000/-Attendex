@@ -21,7 +21,7 @@
       <!-- Header -->
       <div class="text-center mb-8">
         <h2 class="text-3xl font-bold tracking-tight text-white">Welcome back</h2>
-        <p class="mt-2 text-base text-slate-100">Sign in to access your attendance dashboard</p>
+        <p class="mt-2 text-base text-slate-100">Sign in to your account</p>
       </div>
 
       <!-- Login Card -->
@@ -40,20 +40,32 @@
             Employee
           </button>
           <button
-            @click="activeTab = 'organization'"
+            @click="activeTab = 'orgadmin'"
             :class="[
               'pb-4 px-4 font-medium text-sm border-b-2 transition-colors',
-              activeTab === 'organization'
+              activeTab === 'orgadmin'
                 ? 'border-orange-600 text-orange-600'
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             ]"
           >
-            Organization
+            Organization Admin
+          </button>
+          <button
+            v-if="showSuperAdminTab"
+            @click="activeTab = 'superadmin'"
+            :class="[
+              'pb-4 px-4 font-medium text-sm border-b-2 transition-colors',
+              activeTab === 'superadmin'
+                ? 'border-orange-600 text-orange-600'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            ]"
+          >
+            Super Admin
           </button>
         </div>
 
         <!-- Employee Login -->
-        <form v-if="activeTab === 'employee'" @submit.prevent="handleLogin" class="flex flex-col gap-5">
+        <form v-if="activeTab === 'employee'" @submit.prevent="handleLogin('Employee')" class="flex flex-col gap-5">
           <div>
             <label for="email" class="block text-sm font-medium text-slate-700 mb-1.5">Email address</label>
             <input
@@ -107,17 +119,17 @@
 
           <button type="submit" :disabled="isSubmitting" class="w-full bg-orange-600 text-white py-2.5 rounded-lg font-semibold hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
             <Loader2 v-if="isSubmitting" class="mr-2 h-4 w-4 inline animate-spin" />
-            {{ isSubmitting ? 'Signing in...' : 'Sign in to Dashboard' }}
+            {{ isSubmitting ? 'Signing in...' : 'Sign in as Employee' }}
           </button>
         </form>
 
-        <!-- Organization Login -->
-        <form v-else @submit.prevent="handleOrgLogin" class="flex flex-col gap-5">
+        <!-- Organization Admin Login -->
+        <form v-if="activeTab === 'orgadmin'" @submit.prevent="handleLogin('Org_Admin')" class="flex flex-col gap-5">
           <div>
-            <label for="org-email" class="block text-sm font-medium text-slate-700 mb-1.5">Organization Email</label>
+            <label for="org-email" class="block text-sm font-medium text-slate-700 mb-1.5">Organization Admin Email</label>
             <input
               id="org-email"
-              v-model="orgForm.email"
+              v-model="orgAdminForm.email"
               type="email"
               required
               autocomplete="email"
@@ -127,11 +139,19 @@
           </div>
 
           <div>
-            <label for="org-password" class="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="org-password" class="block text-sm font-medium text-slate-700">Password</label>
+              <router-link
+                to="/forgot-password"
+                class="text-xs font-medium text-orange-600 hover:text-orange-700 transition-colors"
+              >
+                Forgot password?
+              </router-link>
+            </div>
             <div class="relative">
               <input
                 id="org-password"
-                v-model="orgForm.password"
+                v-model="orgAdminForm.password"
                 :type="showOrgPassword ? 'text' : 'password'"
                 required
                 autocomplete="current-password"
@@ -151,14 +171,65 @@
 
           <!-- Error Message -->
           <Transition name="fade">
-            <div v-if="orgErrorMessage" class="p-3 rounded-lg bg-danger-50 border border-danger-200 text-danger-800 text-sm">
-              {{ orgErrorMessage }}
+            <div v-if="orgAdminErrorMessage" class="p-3 rounded-lg bg-danger-50 border border-danger-200 text-danger-800 text-sm">
+              {{ orgAdminErrorMessage }}
             </div>
           </Transition>
 
-          <button type="submit" :disabled="isOrgSubmitting" class="w-full bg-orange-600 text-white py-2.5 rounded-lg font-semibold hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-            <Loader2 v-if="isOrgSubmitting" class="mr-2 h-4 w-4 inline animate-spin" />
-            {{ isOrgSubmitting ? 'Signing in...' : 'Sign in to Admin Panel' }}
+          <button type="submit" :disabled="isOrgAdminSubmitting" class="w-full bg-orange-600 text-white py-2.5 rounded-lg font-semibold hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+            <Loader2 v-if="isOrgAdminSubmitting" class="mr-2 h-4 w-4 inline animate-spin" />
+            {{ isOrgAdminSubmitting ? 'Signing in...' : 'Sign in to Admin Panel' }}
+          </button>
+        </form>
+
+        <!-- Super Admin Login (Hidden unless special access) -->
+        <form v-if="activeTab === 'superadmin' && showSuperAdminTab" @submit.prevent="handleLogin('Super_Admin')" class="flex flex-col gap-5">
+          <div>
+            <label for="sa-email" class="block text-sm font-medium text-slate-700 mb-1.5">Super Admin Email</label>
+            <input
+              id="sa-email"
+              v-model="superAdminForm.email"
+              type="email"
+              required
+              autocomplete="email"
+              placeholder="superadmin@platform.com"
+              class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 placeholder-slate-500 focus:border-orange-600 focus:ring-2 focus:ring-orange-100 transition-all"
+            />
+          </div>
+
+          <div>
+            <label for="sa-password" class="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+            <div class="relative">
+              <input
+                id="sa-password"
+                v-model="superAdminForm.password"
+                :type="showSuperAdminPassword ? 'text' : 'password'"
+                required
+                autocomplete="current-password"
+                placeholder="Enter your password"
+                class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 placeholder-slate-500 focus:border-orange-600 focus:ring-2 focus:ring-orange-100 transition-all pr-10"
+              />
+              <button
+                type="button"
+                @click="showSuperAdminPassword = !showSuperAdminPassword"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <EyeOff v-if="showSuperAdminPassword" class="h-4 w-4" />
+                <Eye v-else class="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Error Message -->
+          <Transition name="fade">
+            <div v-if="superAdminErrorMessage" class="p-3 rounded-lg bg-danger-50 border border-danger-200 text-danger-800 text-sm">
+              {{ superAdminErrorMessage }}
+            </div>
+          </Transition>
+
+          <button type="submit" :disabled="isSuperAdminSubmitting" class="w-full bg-red-600 text-white py-2.5 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+            <Loader2 v-if="isSuperAdminSubmitting" class="mr-2 h-4 w-4 inline animate-spin" />
+            {{ isSuperAdminSubmitting ? 'Signing in...' : 'Sign in (System Admin)' }}
           </button>
         </form>
       </div>
@@ -175,7 +246,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { Eye, EyeOff, Loader2 } from 'lucide-vue-next'
@@ -188,17 +259,31 @@ const videoRef = ref(null)
 const activeTab = ref('employee')
 const showPassword = ref(false)
 const showOrgPassword = ref(false)
+const showSuperAdminPassword = ref(false)
 const isSubmitting = ref(false)
-const isOrgSubmitting = ref(false)
+const isOrgAdminSubmitting = ref(false)
+const isSuperAdminSubmitting = ref(false)
 const errorMessage = ref('')
-const orgErrorMessage = ref('')
+const orgAdminErrorMessage = ref('')
+const superAdminErrorMessage = ref('')
+
+// Super Admin tab only visible if accessed via special URL parameter
+const showSuperAdminTab = computed(() => route.query.admin === 'true' || route.query.role === 'super_admin')
 
 onMounted(() => {
   if (videoRef.value) {
     videoRef.value.play().catch(() => {
-      // Handle autoplay policy restrictions
       console.log('Video autoplay failed - user interaction may be required')
     })
+  }
+  
+  // Check if user is coming from super admin registration form
+  if (route.query.role === 'super_admin') {
+    activeTab.value = 'superadmin'
+  } else if (route.query.role === 'org_admin') {
+    activeTab.value = 'orgadmin'
+  } else if (route.query.role === 'employee') {
+    activeTab.value = 'employee'
   }
 })
 
@@ -207,40 +292,57 @@ const form = ref({
   password: '',
 })
 
-const orgForm = ref({
+const orgAdminForm = ref({
   email: '',
   password: '',
 })
 
-async function handleLogin() {
+const superAdminForm = ref({
+  email: '',
+  password: '',
+})
+
+async function handleLogin(userType) {
+  // Clear error messages
   errorMessage.value = ''
-  isSubmitting.value = true
+  orgAdminErrorMessage.value = ''
+  superAdminErrorMessage.value = ''
+
+  // Set submitting state based on user type
+  if (userType === 'Employee') {
+    isSubmitting.value = true
+  } else if (userType === 'Org_Admin') {
+    isOrgAdminSubmitting.value = true
+  } else if (userType === 'Super_Admin') {
+    isSuperAdminSubmitting.value = true
+  }
 
   try {
-    await authStore.login(form.value)
+    const credentials = userType === 'Employee' 
+      ? form.value 
+      : userType === 'Org_Admin' 
+      ? orgAdminForm.value 
+      : superAdminForm.value
+
+    // Pass userType to login
+    await authStore.login({ ...credentials, userType })
+    
     const redirect = route.query.redirect || authStore.dashboardRoute
     router.push(redirect)
   } catch (err) {
-    errorMessage.value =
-      err.response?.data?.message || 'Invalid credentials. Please try again.'
+    const errorMsg = err.response?.data?.message || `${userType} login failed. Please try again.`
+    
+    if (userType === 'Employee') {
+      errorMessage.value = errorMsg
+    } else if (userType === 'Org_Admin') {
+      orgAdminErrorMessage.value = errorMsg
+    } else if (userType === 'Super_Admin') {
+      superAdminErrorMessage.value = errorMsg
+    }
   } finally {
     isSubmitting.value = false
-  }
-}
-
-async function handleOrgLogin() {
-  orgErrorMessage.value = ''
-  isOrgSubmitting.value = true
-
-  try {
-    await authStore.login(orgForm.value)
-    const redirect = route.query.redirect || authStore.dashboardRoute
-    router.push(redirect)
-  } catch (err) {
-    orgErrorMessage.value =
-      err.response?.data?.message || 'Invalid credentials. Please try again.'
-  } finally {
-    isOrgSubmitting.value = false
+    isOrgAdminSubmitting.value = false
+    isSuperAdminSubmitting.value = false
   }
 }
 </script>
@@ -254,3 +356,4 @@ async function handleOrgLogin() {
   opacity: 0;
 }
 </style>
+

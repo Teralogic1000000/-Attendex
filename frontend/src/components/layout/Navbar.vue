@@ -28,58 +28,77 @@
 
         <!-- Right: Actions -->
         <div class="flex items-center gap-3 sm:gap-4">
-          <!-- Notifications -->
-          <div class="relative">
-            <button
-              class="p-2 hover:bg-slate-100 rounded-lg transition-colors relative"
+          <!-- Unauthenticated: Login/Signup Buttons -->
+          <template v-if="!authStore.isAuthenticated">
+            <router-link
+              to="/login"
+              class="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
             >
-              <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
-          </div>
-
-          <!-- Admin Profile Dropdown -->
-          <div class="relative group">
-            <button
-              class="flex items-center gap-2 p-2 hover:bg-primary-50 rounded-lg transition-colors"
+              Login
+            </router-link>
+            <router-link
+              to="/signup"
+              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
             >
-              <div class="w-8 h-8 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white font-medium text-sm">
-                {{ userInitials }}
-              </div>
-              <span class="hidden sm:inline text-sm font-medium text-gray-700">{{ userName }}</span>
-              <svg class="w-4 h-4 text-gray-500 group-hover:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-              </svg>
-            </button>
+              Sign Up
+            </router-link>
+          </template>
 
-            <!-- Dropdown Menu -->
-            <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-primary-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-              <div class="p-4 border-b border-primary-100">
-                <p class="text-sm font-medium text-dark-900">John Doe</p>
-                <p class="text-xs text-gray-600">Admin Account</p>
-              </div>
-              <a
-                href="#"
-                class="block px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 transition-colors"
-              >
-                Profile Settings
-              </a>
-              <a
-                href="#"
-                class="block px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 transition-colors"
-              >
-                Preferences
-              </a>
+          <!-- Authenticated: Notifications & Profile -->
+          <template v-else>
+            <!-- Notifications -->
+            <div class="relative">
               <button
-                @click="handleLogout"
-                class="w-full text-left px-4 py-2 text-sm text-danger-600 hover:bg-danger-50 transition-colors border-t border-primary-100"
+                class="p-2 hover:bg-slate-100 rounded-lg transition-colors relative"
               >
-                Logout
+                <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
             </div>
-          </div>
+
+            <!-- Admin Profile Dropdown -->
+            <div class="relative group">
+              <button
+                class="flex items-center gap-2 p-2 hover:bg-primary-50 rounded-lg transition-colors"
+              >
+                <div class="w-8 h-8 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white font-medium text-sm">
+                  {{ userInitials }}
+                </div>
+                <span class="hidden sm:inline text-sm font-medium text-gray-700">{{ userName }}</span>
+                <svg class="w-4 h-4 text-gray-500 group-hover:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+              </button>
+
+              <!-- Dropdown Menu -->
+              <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-primary-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                <div class="p-4 border-b border-primary-100">
+                  <p class="text-sm font-medium text-dark-900">{{ userName }}</p>
+                  <p class="text-xs text-gray-600">{{ authStore.userRole }}</p>
+                </div>
+                <a
+                  href="#"
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 transition-colors"
+                >
+                  Profile Settings
+                </a>
+                <a
+                  href="#"
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 transition-colors"
+                >
+                  Preferences
+                </a>
+                <button
+                  @click="handleLogout"
+                  class="w-full text-left px-4 py-2 text-sm text-danger-600 hover:bg-danger-50 transition-colors border-t border-primary-100"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
     </div>

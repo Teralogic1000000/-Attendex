@@ -2,10 +2,12 @@
   <div>
     <!-- Hero -->
     <section class="relative overflow-hidden bg-gradient-to-br from-black via-orange-950/50 to-black py-24 lg:py-32">
-      <div class="mx-auto max-w-7xl px-6">
+      <!-- Background SVG Pattern -->
+      <div class="absolute inset-0 opacity-20" style="background-image: url('data:image/svg+xml,%3Csvg width=%22100%22 height=%22100%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cdefs%3E%3Cpattern id=%22grid%22 width=%22100%22 height=%22100%22 patternUnits=%22userSpaceOnUse%22%3E%3Cpath d=%22M 100 0 L 0 0 0 100%22 fill=%22none%22 stroke=%22%23000000%22 stroke-width=%220.5%22/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23ff6600%22/%3E%3Crect width=%22100%22 height=%22100%22 fill=%22url(%23grid)%22 /%3E%3C/svg%3E'); z-index: 0;" />
+      <div class="mx-auto max-w-7xl px-6 relative z-10">
         <div class="mx-auto max-w-2xl text-center">
           <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl text-balance">
-            About Attendex
+            About TrackTimi
           </h1>
           <p class="mt-6 text-lg leading-8 text-gray-300 text-pretty">
             We're building the future of workforce management with cutting-edge attendance tracking technology.
@@ -82,18 +84,18 @@
           </p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <!-- Team Member 1 -->
           <div class="text-center">
-            <div class="relative mb-6">
+            <div class="relative mb-4">
               <div class="aspect-square rounded-full bg-gradient-to-br from-primary-200 to-accent-200 overflow-hidden shadow-lg flex items-center justify-center">
-                <svg class="w-24 h-24 text-primary-600" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-16 h-16 text-primary-600" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
                 </svg>
               </div>
             </div>
-            <h3 class="text-xl font-bold text-slate-900">Sarah Johnson</h3>
-            <p class="text-primary-600 font-semibold mt-1">Co-Founder & CEO</p>
+            <h3 class="text-lg font-bold text-slate-900">Tech Tonic</h3>
+            <p class="text-primary-600 font-semibold mt-1">Senior Developer</p>
             <p class="text-slate-600 mt-3 text-sm leading-6">
               Visionary leader with 10+ years of experience in HR technology and workforce management.
             </p>
@@ -118,15 +120,15 @@
 
           <!-- Team Member 2 -->
           <div class="text-center">
-            <div class="relative mb-6">
+            <div class="relative mb-4">
               <div class="aspect-square rounded-full bg-gradient-to-br from-accent-200 to-warning-200 overflow-hidden shadow-lg flex items-center justify-center">
-                <svg class="w-24 h-24 text-accent-600" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-16 h-16 text-accent-600" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
                 </svg>
               </div>
             </div>
-            <h3 class="text-xl font-bold text-slate-900">Michael Chen</h3>
-            <p class="text-primary-600 font-semibold mt-1">Co-Founder & CTO</p>
+            <h3 class="text-lg font-bold text-slate-900">Terologence</h3>
+            <p class="text-primary-600 font-semibold mt-1">Senior Developer</p>
             <p class="text-slate-600 mt-3 text-sm leading-6">
               Tech visionary with expertise in scalable systems and cloud architecture for enterprise solutions.
             </p>
@@ -151,15 +153,15 @@
 
           <!-- Team Member 3 -->
           <div class="text-center">
-            <div class="relative mb-6">
+            <div class="relative mb-4">
               <div class="aspect-square rounded-full bg-gradient-to-br from-warning-200 to-danger-200 overflow-hidden shadow-lg flex items-center justify-center">
-                <svg class="w-24 h-24 text-warning-600" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-16 h-16 text-warning-600" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
                 </svg>
               </div>
             </div>
-            <h3 class="text-xl font-bold text-slate-900">Emma Rodriguez</h3>
-            <p class="text-primary-600 font-semibold mt-1">Head of Product</p>
+            <h3 class="text-lg font-bold text-slate-900">Isaiah Sumo</h3>
+            <p class="text-primary-600 font-semibold mt-1">Senior Developer</p>
             <p class="text-slate-600 mt-3 text-sm leading-6">
               Product strategist focused on creating intuitive solutions that solve real user problems.
             </p>
@@ -181,6 +183,7 @@
               </a>
             </div>
           </div>
+          
         </div>
       </div>
     </section>

@@ -5,6 +5,7 @@ import { ROLES } from '@/utils/constants'
 // Layouts
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import EmployeeLayout from '@/layouts/EmployeeLayout.vue'
+import OrgAdminLayout from '@/layouts/OrgAdminLayout.vue'
 import SuperAdminLayout from '@/layouts/SuperAdminLayout.vue'
 
 const routes = [
@@ -81,43 +82,33 @@ const routes = [
   // OrgAdmin routes - TrackTimi Admin Dashboard
   {
     path: '/admin',
-    component: () => import('@/layouts/AppLayout.vue'),
+    component: OrgAdminLayout,
     meta: { requiresAuth: true, role: ROLES.ORG_ADMIN },
     children: [
       {
         path: 'dashboard',
         name: 'Dashboard',
-        component: () => import('@/pages/Dashboard.vue'),
+        component: () => import('@/views/orgadmin/OrgDashboard.vue'),
       },
       {
         path: 'users',
         name: 'Users',
-        component: () => import('@/pages/Users.vue'),
-      },
-      {
-        path: 'departments',
-        name: 'Departments',
-        component: () => import('@/pages/Departments.vue'),
-      },
-      {
-        path: 'shifts',
-        name: 'Shifts',
-        component: () => import('@/pages/Shifts.vue'),
+        component: () => import('@/views/orgadmin/UserManagement.vue'),
       },
       {
         path: 'attendance',
         name: 'Attendance',
-        component: () => import('@/pages/Attendance.vue'),
+        component: () => import('@/views/orgadmin/OrgAttendance.vue'),
       },
       {
         path: 'reports',
         name: 'Reports',
-        component: () => import('@/pages/Reports.vue'),
+        component: () => import('@/views/orgadmin/OrgReports.vue'),
       },
       {
         path: 'settings',
         name: 'Settings',
-        component: () => import('@/pages/Settings.vue'),
+        component: () => import('@/views/orgadmin/OrgSettings.vue'),
       },
     ],
   },
@@ -205,16 +196,23 @@ router.beforeEach((to, from, next) => {
 
   // If route requires auth and user is not authenticated
   if (requiresAuth && !authStore.isAuthenticated) {
-    return next({ name: 'Login', query: { redirect: to.fullPath } })
+    if (to.path !== '/login') {
+      return next({ name: 'Login', query: { redirect: to.fullPath } })
+    }
+    return next()
   }
 
-  // If route is guest only and user is authenticated
-  if (guestOnly && authStore.isAuthenticated) {
-    return next(authStore.dashboardRoute)
+  // If route is guest only and user is authenticated (except home page)
+  if (guestOnly && authStore.isAuthenticated && to.path !== '/') {
+    const dashboardUrl = authStore.dashboardRoute
+    if (dashboardUrl && dashboardUrl !== to.path) {
+      return next(dashboardUrl)
+    }
+    return next()
   }
 
-  // If route requires a specific role
-  if (requiredRole && authStore.userRole !== requiredRole) {
+  // If route requires a specific role and user doesn't have it
+  if (requiredRole && authStore.isAuthenticated && authStore.userRole !== requiredRole) {
     return next(authStore.dashboardRoute)
   }
 

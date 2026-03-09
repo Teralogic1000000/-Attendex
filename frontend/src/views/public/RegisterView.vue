@@ -1,24 +1,51 @@
 <template>
   <div class="min-h-[calc(100vh-4rem)] flex items-center justify-center px-6 py-12 overflow-hidden bg-gradient-to-br from-slate-50 to-white">
-  
     <div class="w-full max-w-2xl">
       <!-- Header -->
       <div class="text-center mb-8">
-        <h2 class="text-3xl font-bold tracking-tight text-slate-900">Create your account</h2>
-        <p class="mt-2 text-base text-slate-600">Register your organization and start managing attendance</p>
+        <h2 class="text-3xl font-bold tracking-tight text-slate-900">Create Your Account</h2>
+        <p class="mt-2 text-base text-slate-600">Register your organization and get started with attendance management</p>
       </div>
 
       <!-- Registration Card -->
       <div class="bg-white rounded-2xl border border-orange-400 p-8 shadow-sm">
-        <form @submit.prevent="handleRegister" class="flex flex-col gap-6">
+        <!-- Tabs -->
+        <div class="flex gap-4 mb-8 border-b border-slate-200">
+          <button
+            @click="activeTab = 'organization'"
+            :class="[
+              'pb-4 px-4 font-medium text-sm border-b-2 transition-colors',
+              activeTab === 'organization'
+                ? 'border-orange-600 text-orange-600'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            ]"
+          >
+            Organization
+          </button>
+          <button
+            v-if="showSuperAdminTab"
+            @click="activeTab = 'superadmin'"
+            :class="[
+              'pb-4 px-4 font-medium text-sm border-b-2 transition-colors',
+              activeTab === 'superadmin'
+                ? 'border-red-600 text-red-600'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            ]"
+          >
+            Super Admin
+          </button>
+        </div>
+
+        <!-- Organization Registration -->
+        <form v-if="activeTab === 'organization'" @submit.prevent="handleRegister" class="flex flex-col gap-6">
           <!-- Organization Section -->
           <div class="space-y-4">
-            <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wider px-1">Organization Details</h3>
+            <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wider">📋 Organization Details</h3>
 
             <!-- Organization Name -->
             <div>
               <label for="orgName" class="block text-sm font-medium text-slate-700 mb-1.5">
-                Organization Name
+                Organization Name <span class="text-red-600">*</span>
               </label>
               <input
                 id="orgName"
@@ -26,112 +53,52 @@
                 type="text"
                 required
                 placeholder="Acme Corporation"
-                class="w-full px-4 py-2.5 rounded-lg border border-orange-400 text-slate-900 placeholder-slate-500 focus:border-primary-600 focus:ring-2 focus:ring-orange-300 transition-all"
+                class="w-full px-4 py-2.5 rounded-lg border border-orange-400 text-slate-900 placeholder-slate-500 focus:border-orange-600 focus:ring-2 focus:ring-orange-200 transition-all"
               />
+              <p class="text-xs text-slate-500 mt-1">The official name of your company</p>
             </div>
 
-            <!-- Organization Size -->
+            <!-- Organization Phone (Optional) -->
             <div>
-              <label for="orgSize" class="block text-sm font-medium text-slate-700 mb-1.5">
-                Organization Size
+              <label for="phone" class="block text-sm font-medium text-slate-700 mb-1.5">
+                Organization Phone <span class="text-slate-400">(optional)</span>
               </label>
-              <select
-                id="orgSize"
-                v-model="form.orgSize"
-                required
-                class="w-full px-4 py-2.5 rounded-lg border border-orange-400 text-slate-900 focus:border-orange-400 focus:ring-2 focus:ring-primary-100 transition-all bg-white"
-              >
-                <option value="">Select your organization size</option>
-                <option value="startup">Startup (1-25 employees)</option>
-                <option value="small">Small (26-100 employees)</option>
-                <option value="medium">Medium (101-500 employees)</option>
-                <option value="large">Large (501-1000 employees)</option>
-                <option value="enterprise">Enterprise (1000+ employees)</option>
-              </select>
-            </div>
-
-            <!-- Logo Upload -->
-            <div>
-              <label for="logo" class="block text-sm font-medium text-slate-700 mb-1.5">
-                Organization Logo
-              </label>
-              <div class="space-y-3">
-                <div class="flex items-center gap-4">
-                  <div v-if="logoPreview" class="w-20 h-20 rounded-lg border border-orange-400 overflow-hidden bg-slate-50 flex items-center justify-center flex-shrink-0">
-                    <img :src="logoPreview" :alt="form.orgName" class="w-full h-full object-cover" />
-                  </div>
-                  <div v-else class="w-20 h-20 rounded-lg border-2 border-dashed border-orange-400 bg-slate-50 flex items-center justify-center flex-shrink-0">
-                    <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div class="flex-1">
-                    <input
-                      id="logo"
-                      type="file"
-                      accept="image/*"
-                      @change="handleLogoUpload"
-                      class="w-full px-4 py-2.5 rounded-lg border border-orange-400 text-slate-900 text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-orange-500 cursor-pointer"
-                    />
-                    <p class="text-xs text-slate-500 mt-1">PNG, JPG, GIF up to 2MB</p>
-                  </div>
-                </div>
-                <button
-                  v-if="logoPreview"
-                  type="button"
-                  @click="logoPreview = null; form.logo = null"
-                  class="text-sm text-danger-600 hover:text-danger-700 font-medium transition-colors"
-                >
-                  Remove logo
-                </button>
-              </div>
-            </div>
-
-            <!-- Theme Color -->
-            <div>
-              <label for="themeColor" class="block text-sm font-medium text-slate-800 mb-1.5">
-                Primary Theme Color
-              </label>
-              <div class="flex gap-3 items-center">
-                <input
-                  id="themeColor"
-                  v-model="form.theme.primary"
-                  type="color"
-                  class="h-10 w-16 cursor-pointer border border-orange-400 rounded-lg"
-                />
-                <input
-                  v-model="form.theme.primary"
-                  type="text"
-                  placeholder="#ff6600"
-                  maxlength="7"
-                  class="flex-1 px-4 py-2.5 rounded-lg border border-orange-400 text-slate-900 placeholder-slate-500 focus:border-orange-400 focus:ring-2 focus:ring-primary-100 transition-all text-sm"
-                />
-              </div>
-              <p class="text-xs text-slate-500 mt-1.5">Customize your dashboard appearance (defaults to orange)</p>
-            </div>
-
-            <!-- Dark Mode Toggle -->
-            <div class="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-orange-400">
               <input
-                id="darkMode"
-                v-model="form.theme.darkMode"
-                type="checkbox"
-                class="w-4 h-4 rounded border-orange-400 cursor-pointer accent-primary-600"
+                id="phone"
+                v-model="form.phone"
+                type="tel"
+                placeholder="+1 (555) 123-4567"
+                class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 placeholder-slate-500 focus:border-orange-600 focus:ring-2 focus:ring-orange-200 transition-all"
               />
-              <label for="darkMode" class="flex-1 text-sm font-medium text-slate-800 cursor-pointer">
-                Enable Dark Mode by Default
+              <p class="text-xs text-slate-500 mt-1">Main contact number for your organization</p>
+            </div>
+
+            <!-- Organization Address (Optional) -->
+            <div>
+              <label for="address" class="block text-sm font-medium text-slate-700 mb-1.5">
+                Organization Address <span class="text-slate-400">(optional)</span>
               </label>
+              <input
+                id="address"
+                v-model="form.address"
+                type="text"
+                placeholder="123 Business St, Suite 100"
+                class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 placeholder-slate-500 focus:border-orange-600 focus:ring-2 focus:ring-orange-200 transition-all"
+              />
+              <p class="text-xs text-slate-500 mt-1">Physical location of your organization</p>
             </div>
           </div>
 
           <!-- Admin Account Section -->
           <div class="space-y-4 border-t border-orange-400 pt-6">
-            <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wider px-1">Admin Account</h3>
+            <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wider">👤 Admin Account Details</h3>
+            <p class="text-sm text-slate-600">This account will have full administrative access</p>
 
+            <!-- First and Last Name -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label for="firstName" class="block text-sm font-medium text-slate-800 mb-1.5">
-                  First Name
+                <label for="firstName" class="block text-sm font-medium text-slate-700 mb-1.5">
+                  First Name <span class="text-red-600">*</span>
                 </label>
                 <input
                   id="firstName"
@@ -139,12 +106,12 @@
                   type="text"
                   required
                   placeholder="John"
-                  class="w-full px-4 py-2.5 rounded-lg border border-orange-400 text-slate-900 placeholder-slate-500 focus:border-orange-400 focus:ring-2 focus:ring-primary-100 transition-all"
+                  class="w-full px-4 py-2.5 rounded-lg border border-orange-400 text-slate-900 placeholder-slate-500 focus:border-orange-600 focus:ring-2 focus:ring-orange-200 transition-all"
                 />
               </div>
               <div>
                 <label for="lastName" class="block text-sm font-medium text-slate-700 mb-1.5">
-                  Last Name
+                  Last Name <span class="text-red-600">*</span>
                 </label>
                 <input
                   id="lastName"
@@ -152,53 +119,77 @@
                   type="text"
                   required
                   placeholder="Doe"
-                  class="w-full px-4 py-2.5 rounded-lg border border-orange-400 text-slate-900 placeholder-slate-500 focus:border-orange-400 focus:ring-2 focus:ring-primary-100 transition-all"
+                  class="w-full px-4 py-2.5 rounded-lg border border-orange-400 text-slate-900 placeholder-slate-500 focus:border-orange-600 focus:ring-2 focus:ring-orange-200 transition-all"
                 />
               </div>
             </div>
 
+            <!-- Email -->
             <div>
-              <label for="regEmail" class="block text-sm font-medium text-slate-700 mb-1.5">
-                Email Address
+              <label for="email" class="block text-sm font-medium text-slate-700 mb-1.5">
+                Email Address <span class="text-red-600">*</span>
               </label>
               <input
-                id="regEmail"
+                id="email"
                 v-model="form.email"
                 type="email"
                 required
                 autocomplete="email"
                 placeholder="admin@company.com"
-                class="w-full px-4 py-2.5 rounded-lg border border-orange-400 text-slate-900 placeholder-slate-500 focus:border-orange-400 focus:ring-2 focus:ring-primary-100 transition-all"
+                class="w-full px-4 py-2.5 rounded-lg border border-orange-400 text-slate-900 placeholder-slate-500 focus:border-orange-600 focus:ring-2 focus:ring-orange-200 transition-all"
               />
+              <p class="text-xs text-slate-500 mt-1">Used to log in to your admin account</p>
             </div>
 
+            <!-- Password Fields -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label for="regPassword" class="block text-sm font-medium text-slate-800 mb-1.5">
-                  Password
+                <label for="password" class="block text-sm font-medium text-slate-700 mb-1.5">
+                  Password <span class="text-red-600">*</span>
                 </label>
-                <input
-                  id="regPassword"
-                  v-model="form.password"
-                  type="password"
-                  required
-                  minlength="8"
-                  placeholder="Min. 8 characters"
-                  class="w-full px-4 py-2.5 rounded-lg border border-orange-400 text-slate-900 placeholder-slate-500 focus:border-orange-400 focus:ring-2 focus:ring-primary-100 transition-all"
-                />
+                <div class="relative">
+                  <input
+                    id="password"
+                    v-model="form.password"
+                    :type="showPassword ? 'text' : 'password'"
+                    required
+                    minlength="8"
+                    placeholder="Min. 8 characters"
+                    class="w-full px-4 py-2.5 rounded-lg border border-orange-400 text-slate-900 placeholder-slate-500 focus:border-orange-600 focus:ring-2 focus:ring-orange-200 transition-all pr-10"
+                  />
+                  <button
+                    type="button"
+                    @click="showPassword = !showPassword"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <span v-if="showPassword" class="text-sm">Hide</span>
+                    <span v-else class="text-sm">Show</span>
+                  </button>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">At least 8 characters</p>
               </div>
               <div>
-                <label for="confirmPassword" class="block text-sm font-medium text-slate-800 mb-1.5">
-                  Confirm Password
+                <label for="confirmPassword" class="block text-sm font-medium text-slate-700 mb-1.5">
+                  Confirm Password <span class="text-red-600">*</span>
                 </label>
-                <input
-                  id="confirmPassword"
-                  v-model="form.confirmPassword"
-                  type="password"
-                  required
-                  placeholder="Repeat password"
-                  class="w-full px-4 py-2.5 rounded-lg border border-orange-400 text-slate-900 placeholder-slate-500 focus:border-orange-400 focus:ring-2 focus:ring-primary-100 transition-all"
-                />
+                <div class="relative">
+                  <input
+                    id="confirmPassword"
+                    v-model="form.confirmPassword"
+                    :type="showConfirmPassword ? 'text' : 'password'"
+                    required
+                    placeholder="Repeat password"
+                    class="w-full px-4 py-2.5 rounded-lg border border-orange-400 text-slate-900 placeholder-slate-500 focus:border-orange-600 focus:ring-2 focus:ring-orange-200 transition-all pr-10"
+                  />
+                  <button
+                    type="button"
+                    @click="showConfirmPassword = !showConfirmPassword"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <span v-if="showConfirmPassword" class="text-sm">Hide</span>
+                    <span v-else class="text-sm">Show</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -215,11 +206,11 @@
               />
               <label for="terms" class="flex-1 text-sm text-slate-700 cursor-pointer">
                 I agree to the
-                <a href="#" class="font-semibold text-primary-600 hover:text-primary-700 transition-colors">
+                <a href="#" class="font-semibold text-orange-600 hover:text-orange-700 transition-colors">
                   Terms & Conditions
                 </a>
                 and
-                <a href="#" class="font-semibold text-primary-600 hover:text-primary-700 transition-colors">
+                <a href="#" class="font-semibold text-orange-600 hover:text-orange-700 transition-colors">
                   Privacy Policy
                 </a>
               </label>
@@ -228,14 +219,14 @@
 
           <!-- Messages -->
           <Transition name="fade">
-            <div v-if="errorMessage" class="p-4 rounded-lg bg-danger-50 border border-danger-200 text-danger-800 text-sm">
-              {{ errorMessage }}
+            <div v-if="errorMessage" class="p-4 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm">
+              <strong>Error:</strong> {{ errorMessage }}
             </div>
           </Transition>
 
           <Transition name="fade">
             <div v-if="successMessage" class="p-4 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm">
-              {{ successMessage }}
+              <strong>Success!</strong> {{ successMessage }}
             </div>
           </Transition>
 
@@ -243,10 +234,147 @@
           <button
             type="submit"
             :disabled="isSubmitting || !form.agreeToTerms"
-            class="w-full btn-primary py-3 font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            class="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
           >
-            <Loader2 v-if="isSubmitting" class="mr-2 h-4 w-4 inline animate-spin" />
-            {{ isSubmitting ? 'Creating Account...' : 'Create Account' }}
+            <span v-if="isSubmitting" class="inline-block animate-spin">⏳</span>
+            {{ isSubmitting ? 'Creating Account...' : 'Create Organization Account' }}
+          </button>
+        </form>
+
+        <!-- Super Admin Registration -->
+        <form v-if="activeTab === 'superadmin' && showSuperAdminTab" @submit.prevent="handleSuperAdminRegister" class="flex flex-col gap-6">
+          <div class="space-y-4">
+            <h3 class="text-sm font-semibold text-red-900 uppercase tracking-wider">🛡️ System Administrator Account</h3>
+            <p class="text-sm text-slate-600">Create a new Super Admin account for platform administration</p>
+
+            <!-- First and Last Name -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label for="sa-firstName" class="block text-sm font-medium text-slate-700 mb-1.5">
+                  First Name <span class="text-red-600">*</span>
+                </label>
+                <input
+                  id="sa-firstName"
+                  v-model="superAdminForm.firstName"
+                  type="text"
+                  required
+                  placeholder="John"
+                  class="w-full px-4 py-2.5 rounded-lg border border-red-300 text-slate-900 placeholder-slate-500 focus:border-red-600 focus:ring-2 focus:ring-red-200 transition-all"
+                />
+              </div>
+              <div>
+                <label for="sa-lastName" class="block text-sm font-medium text-slate-700 mb-1.5">
+                  Last Name <span class="text-red-600">*</span>
+                </label>
+                <input
+                  id="sa-lastName"
+                  v-model="superAdminForm.lastName"
+                  type="text"
+                  required
+                  placeholder="Admin"
+                  class="w-full px-4 py-2.5 rounded-lg border border-red-300 text-slate-900 placeholder-slate-500 focus:border-red-600 focus:ring-2 focus:ring-red-200 transition-all"
+                />
+              </div>
+            </div>
+
+            <!-- Email -->
+            <div>
+              <label for="sa-email" class="block text-sm font-medium text-slate-700 mb-1.5">
+                Email Address <span class="text-red-600">*</span>
+              </label>
+              <input
+                id="sa-email"
+                v-model="superAdminForm.email"
+                type="email"
+                required
+                placeholder="superadmin@platform.com"
+                class="w-full px-4 py-2.5 rounded-lg border border-red-300 text-slate-900 placeholder-slate-500 focus:border-red-600 focus:ring-2 focus:ring-red-200 transition-all"
+              />
+            </div>
+
+            <!-- Password -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label for="sa-password" class="block text-sm font-medium text-slate-700 mb-1.5">
+                  Password <span class="text-red-600">*</span>
+                </label>
+                <div class="relative">
+                  <input
+                    id="sa-password"
+                    v-model="superAdminForm.password"
+                    :type="showSuperAdminPassword ? 'text' : 'password'"
+                    required
+                    minlength="8"
+                    placeholder="Min. 8 characters"
+                    class="w-full px-4 py-2.5 rounded-lg border border-red-300 text-slate-900 placeholder-slate-500 focus:border-red-600 focus:ring-2 focus:ring-red-200 transition-all pr-10"
+                  />
+                  <button
+                    type="button"
+                    @click="showSuperAdminPassword = !showSuperAdminPassword"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <span v-if="showSuperAdminPassword" class="text-sm">Hide</span>
+                    <span v-else class="text-sm">Show</span>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label for="sa-confirmPassword" class="block text-sm font-medium text-slate-700 mb-1.5">
+                  Confirm Password <span class="text-red-600">*</span>
+                </label>
+                <div class="relative">
+                  <input
+                    id="sa-confirmPassword"
+                    v-model="superAdminForm.confirmPassword"
+                    :type="showSuperAdminConfirmPassword ? 'text' : 'password'"
+                    required
+                    placeholder="Repeat password"
+                    class="w-full px-4 py-2.5 rounded-lg border border-red-300 text-slate-900 placeholder-slate-500 focus:border-red-600 focus:ring-2 focus:ring-red-200 transition-all pr-10"
+                  />
+                  <button
+                    type="button"
+                    @click="showSuperAdminConfirmPassword = !showSuperAdminConfirmPassword"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <span v-if="showSuperAdminConfirmPassword" class="text-sm">Hide</span>
+                    <span v-else class="text-sm">Show</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Admin Secret Key -->
+            <div>
+              <label for="sa-adminSecret" class="block text-sm font-medium text-slate-700 mb-1.5">
+                Admin Secret Key <span class="text-red-600">*</span>
+              </label>
+              <input
+                id="sa-adminSecret"
+                v-model="superAdminForm.adminSecret"
+                type="password"
+                required
+                placeholder="Enter admin secret key"
+                class="w-full px-4 py-2.5 rounded-lg border border-red-300 text-slate-900 placeholder-slate-500 focus:border-red-600 focus:ring-2 focus:ring-red-200 transition-all"
+              />
+              <p class="text-xs text-slate-500 mt-1">Required security key for Super Admin registration</p>
+            </div>
+          </div>
+
+          <!-- Messages -->
+          <Transition name="fade">
+            <div v-if="superAdminErrorMessage" class="p-4 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm">
+              <strong>Error:</strong> {{ superAdminErrorMessage }}
+            </div>
+          </Transition>
+
+          <!-- Submit Button -->
+          <button
+            type="submit"
+            :disabled="isSuperAdminSubmitting"
+            class="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+          >
+            <span v-if="isSuperAdminSubmitting" class="inline-block animate-spin">⏳</span>
+            {{ isSuperAdminSubmitting ? 'Creating Account...' : 'Create Super Admin Account' }}
           </button>
         </form>
       </div>
@@ -254,8 +382,14 @@
       <!-- Footer -->
       <p class="mt-6 text-center text-sm text-slate-600">
         Already have an account?
-        <router-link to="/login" class="font-semibold text-primary-600 hover:text-primary-700 transition-colors">
-          Sign in
+        <router-link 
+          :to="activeTab === 'organization' ? '/login?role=org_admin' : '/login?role=super_admin'" 
+          :class="[
+            'font-semibold transition-colors',
+            activeTab === 'organization' ? 'text-orange-600 hover:text-orange-700' : 'text-red-600 hover:text-red-700'
+          ]"
+        >
+          {{ activeTab === 'organization' ? 'Sign in as Organization Admin' : 'Sign in as Super Admin' }}
         </router-link>
       </p>
     </div>
@@ -263,22 +397,32 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { Loader2 } from 'lucide-vue-next'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
+
+const activeTab = ref('organization')
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
+const showSuperAdminPassword = ref(false)
+const showSuperAdminConfirmPassword = ref(false)
+const isSubmitting = ref(false)
+const isSuperAdminSubmitting = ref(false)
+const errorMessage = ref('')
+const successMessage = ref('')
+const superAdminErrorMessage = ref('')
+
+// Super Admin tab only visible if accessed via special URL parameter
+const showSuperAdminTab = computed(() => route.query.admin === 'true')
 
 const form = ref({
   orgName: '',
-  orgSize: '',
-  logo: null,
-  theme: {
-    primary: '#ff6600',
-    darkMode: false
-  },
+  phone: '',
+  address: '',
   firstName: '',
   lastName: '',
   email: '',
@@ -287,68 +431,161 @@ const form = ref({
   agreeToTerms: false,
 })
 
-const logoPreview = ref(null)
-const isSubmitting = ref(false)
-const errorMessage = ref('')
-const successMessage = ref('')
-
-const handleLogoUpload = (event) => {
-  const file = event.target.files?.[0]
-  if (!file) return
-
-  // Validate file size (2MB max)
-  if (file.size > 2 * 1024 * 1024) {
-    errorMessage.value = 'File size must be less than 2MB'
-    return
-  }
-
-  // Validate file type
-  if (!file.type.startsWith('image/')) {
-    errorMessage.value = 'Please upload an image file'
-    return
-  }
-
-  form.value.logo = file
-
-  // Create preview
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    logoPreview.value = e.target?.result
-  }
-  reader.readAsDataURL(file)
-}
+const superAdminForm = ref({
+  firstName: '',
+  lastName: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+  adminSecret: '',
+})
 
 async function handleRegister() {
   errorMessage.value = ''
   successMessage.value = ''
 
+  // Validation
+  if (!form.value.orgName.trim()) {
+    errorMessage.value = 'Organization name is required'
+    return
+  }
+
+  if (!form.value.firstName.trim() || !form.value.lastName.trim()) {
+    errorMessage.value = 'First name and last name are required'
+    return
+  }
+
+  if (!form.value.email.trim()) {
+    errorMessage.value = 'Email address is required'
+    return
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(form.value.email.trim())) {
+    errorMessage.value = 'Please enter a valid email address (e.g., admin@company.com)'
+    return
+  }
+
+  if (form.value.password.length < 8) {
+    errorMessage.value = 'Password must be at least 8 characters long'
+    return
+  }
+
   if (form.value.password !== form.value.confirmPassword) {
-    errorMessage.value = 'Passwords do not match.'
+    errorMessage.value = 'Passwords do not match'
     return
   }
 
   if (!form.value.agreeToTerms) {
-    errorMessage.value = 'You must agree to the terms and conditions.'
-    return
-  }
-
-  if (!form.value.orgSize) {
-    errorMessage.value = 'Please select an organization size.'
+    errorMessage.value = 'You must agree to the terms and conditions'
     return
   }
 
   isSubmitting.value = true
 
   try {
-    const { confirmPassword, ...data } = form.value
-    await authStore.register(data)
-    successMessage.value = 'Account created successfully! Redirecting to login...'
-    setTimeout(() => router.push('/login'), 2000)
+    // Send registration data to backend
+    const registrationData = {
+      orgName: form.value.orgName.trim(),
+      firstName: form.value.firstName.trim(),
+      lastName: form.value.lastName.trim(),
+      email: form.value.email.trim(),
+      password: form.value.password,
+      phone: form.value.phone.trim() || null,
+      address: form.value.address.trim() || null,
+    }
+
+    await authStore.registerOrganization(registrationData)
+    
+    successMessage.value = 'Organization account created successfully! Redirecting to login...'
+    
+    // Redirect to login after a short delay
+    setTimeout(() => {
+      router.push('/login')
+    }, 2000)
   } catch (err) {
+    console.error('Registration error:', err)
+    console.error('Error response:', err.response?.data)
+    console.error('Error message:', err.message)
     errorMessage.value =
-      err.response?.data?.message || 'Registration failed. Please try again.'
+      err.response?.data?.message || 
+      err.message || 
+      'Registration failed. Please try again.'
   } finally {
     isSubmitting.value = false
+  }
+}
+
+async function handleSuperAdminRegister() {
+  superAdminErrorMessage.value = ''
+
+  // Validation
+  if (!superAdminForm.value.firstName.trim()) {
+    superAdminErrorMessage.value = 'First name is required'
+    return
+  }
+
+  if (!superAdminForm.value.lastName.trim()) {
+    superAdminErrorMessage.value = 'Last name is required'
+    return
+  }
+
+  if (!superAdminForm.value.email.trim()) {
+    superAdminErrorMessage.value = 'Email address is required'
+    return
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(superAdminForm.value.email.trim())) {
+    superAdminErrorMessage.value = 'Please enter a valid email address (e.g., admin@company.com)'
+    return
+  }
+
+  if (superAdminForm.value.password.length < 8) {
+    superAdminErrorMessage.value = 'Password must be at least 8 characters long'
+    return
+  }
+
+  if (superAdminForm.value.password !== superAdminForm.value.confirmPassword) {
+    superAdminErrorMessage.value = 'Passwords do not match'
+    return
+  }
+
+  if (!superAdminForm.value.adminSecret.trim()) {
+    superAdminErrorMessage.value = 'Admin secret key is required'
+    return
+  }
+
+  isSuperAdminSubmitting.value = true
+
+  try {
+    const registrationData = {
+      firstName: superAdminForm.value.firstName.trim(),
+      lastName: superAdminForm.value.lastName.trim(),
+      email: superAdminForm.value.email.trim(),
+      password: superAdminForm.value.password,
+      adminSecret: superAdminForm.value.adminSecret.trim(),
+    }
+
+    await authStore.registerSuperAdmin(registrationData)
+    
+    const successMsg = 'Super Admin account created successfully! Redirecting to login...'
+    successMessage.value = successMsg
+    
+    // Redirect to login after a short delay
+    setTimeout(() => {
+      router.push('/login?admin=true')
+    }, 2000)
+  } catch (err) {
+    console.error('Super Admin registration error:', err)
+    superAdminErrorMessage.value =
+      err.response?.data?.message || 
+      err.message || 
+      'Super Admin registration failed. Please try again.'
+  } finally {
+    isSuperAdminSubmitting.value = false
   }
 }
 </script>
@@ -364,4 +601,5 @@ async function handleRegister() {
   opacity: 0;
 }
 </style>
+
 
