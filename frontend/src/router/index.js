@@ -90,25 +90,71 @@ const routes = [
         name: 'Dashboard',
         component: () => import('@/views/orgadmin/OrgDashboard.vue'),
       },
+      // Employee Management
       {
-        path: 'users',
-        name: 'Users',
-        component: () => import('@/views/orgadmin/UserManagement.vue'),
+        path: 'employees',
+        name: 'Employees',
+        component: () => import('@/views/orgadmin/EmployeeManagement.vue'),
       },
+      // Department Management
+      {
+        path: 'departments',
+        name: 'Departments',
+        component: () => import('@/views/orgadmin/DepartmentManagement.vue'),
+      },
+      // Shift Management
+      {
+        path: 'shifts',
+        name: 'Shifts',
+        component: () => import('@/views/orgadmin/ShiftManagement.vue'),
+      },
+      // Schedule Management
+      {
+        path: 'schedules',
+        name: 'Schedules',
+        component: () => import('@/views/orgadmin/ScheduleManagement.vue'),
+      },
+      // Attendance Management
       {
         path: 'attendance',
         name: 'Attendance',
         component: () => import('@/views/orgadmin/OrgAttendance.vue'),
       },
+      // Reports
       {
         path: 'reports',
         name: 'Reports',
         component: () => import('@/views/orgadmin/OrgReports.vue'),
       },
+      // Notifications
+      {
+        path: 'notifications',
+        name: 'Notifications',
+        component: () => import('@/views/orgadmin/NotificationCenter.vue'),
+      },
+      // Request Approvals
+      {
+        path: 'approvals',
+        name: 'Approvals',
+        component: () => import('@/views/orgadmin/RequestApprovals.vue'),
+      },
+      // Admin Profile
+      {
+        path: 'profile',
+        name: 'AdminProfile',
+        component: () => import('@/views/orgadmin/AdminProfile.vue'),
+      },
+      // Organization Settings
       {
         path: 'settings',
         name: 'Settings',
         component: () => import('@/views/orgadmin/OrgSettings.vue'),
+      },
+      // Legacy routes (backward compatibility)
+      {
+        path: 'users',
+        name: 'Users',
+        component: () => import('@/views/orgadmin/UserManagement.vue'),
       },
     ],
   },

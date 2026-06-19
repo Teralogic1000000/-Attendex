@@ -91,7 +91,7 @@
         </div>
         <div v-if="!editingUser">
           <label class="label-text">Password</label>
-          <input v-model="form.password" type="password" required minlength="8" placeholder="Min. 8 characters" class="input-field mt-1.5" />
+          <input v-model="form.password" type="password" required minlength="8" placeholder="Min. 8 characters" autocomplete="new-password" class="input-field mt-1.5" />
         </div>
 
         <p v-if="formError" class="text-sm text-danger-600 bg-danger-50 rounded-lg px-3 py-2">

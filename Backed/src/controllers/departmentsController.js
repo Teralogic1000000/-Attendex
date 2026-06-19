@@ -1,151 +1,165 @@
-import supabase from '../config/supabaseClient.js'
-import {
-  create,
-  update,
-  deleteById,
-} from '../config/supabaseMapper.js'
-import { successResponse, errorResponse } from '../utils/response.js'
-import { asyncHandler } from '../utils/asyncHandler.js'
+import prisma from '../config/prisma.js';
+import { successResponse, errorResponse } from '../utils/response.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 
 /**
  * Create a new department
  */
 export const createDepartment = asyncHandler(async (req, res) => {
-  const { name, description, head } = req.body
-  const orgId = req.user.orgId
+  const { name, description, head } = req.body;
+  const orgId = req.user.orgId;
 
   if (!name) {
-    return errorResponse(res, 'Department name is required', 400)
+    return errorResponse(res, 'Department name is required', 400);
   }
 
-  const { data: department, error } = await supabase
-    .from('Department')
-    .insert([{
+  const department = await prisma.department.create({
+    data: {
       name,
       description,
       head,
+      status: 'ACTIVE',
       orgId
-    }])
-    .select()
-    .single()
+    }
+  });
 
-  if (error) {
-    return errorResponse(res, error.message, 400)
-  }
-
-  return successResponse(res, 'Department created successfully', department, 201)
-})
+  return successResponse(res, 'Department created successfully', department, 201);
+});
 
 /**
- * Get all departments in the organization
- * Uses department_full_view to include organization name
+ * Get all departments for organization
  */
 export const getDepartments = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1
-  const limit = parseInt(req.query.limit) || 10
-  const skip = (page - 1) * limit
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+  const orgId = req.user.orgId;
 
-  // Use department_full_view for readable data
-  const { data: departments, error, count } = await supabase
-    .from('department_full_view')
-    .select('*', { count: 'exact' })
-    .order('Department_Name', { ascending: true })
-    .range(skip, skip + limit - 1)
-
-  if (error) {
-    return errorResponse(res, error.message, 400)
-  }
+  const [departments, total] = await Promise.all([
+    prisma.department.findMany({
+      where: { orgId },
+      orderBy: { name: 'asc' },
+      skip,
+      take: limit
+    }),
+    prisma.department.count({ where: { orgId } })
+  ]);
 
   return successResponse(res, 'Departments fetched successfully', {
-    data: departments || [],
+    departments,
     pagination: {
+      total,
       page,
       limit,
-      total: count || 0,
-      pages: Math.ceil((count || 0) / limit)
+      totalPages: Math.ceil(total / limit)
     }
-  })
-})
+  });
+});
 
 /**
- * Get a single department
- * Uses department_full_view for readable data
+ * Get department by ID
  */
-export const getDepartment = asyncHandler(async (req, res) => {
-  const { id } = req.params
+export const getDepartmentById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const orgId = req.user.orgId;
 
-  // Use department_full_view for readable data
-  const { data: department, error } = await supabase
-    .from('department_full_view')
-    .select('*')
-    .eq('Dept_ID', id)
-    .single()
-
-  if (error || !department) {
-    return errorResponse(res, 'Department not found', 404)
-  }
-
-  // Get users in this department
-  const users = await findMany('user', { departmentId: parseInt(id) }, { limit: 1000 });
-
-  return successResponse(res, 'Department fetched successfully', {
-    ...department,
-    users: users.map(u => ({
-      id: u.id,
-      firstName: u.firstName,
-      lastName: u.lastName,
-      email: u.email,
-      jobTitle: u.jobTitle
-    })),
-    employeeCount: users.length
-  })
-})
-
-/**
- * Update a department
- */
-export const updateDepartment = asyncHandler(async (req, res) => {
-  const { id } = req.params
-  const { name, description, head } = req.body
-  const orgId = req.user.orgId
-
-  const department = await findOne('department', { id, orgId });
+  const department = await prisma.department.findFirst({
+    where: { id, orgId }
+  });
 
   if (!department) {
-    return errorResponse(res, 'Department not found', 404)
+    return errorResponse(res, 'Department not found', 404);
+  }
+
+  return successResponse(res, 'Department retrieved successfully', department);
+});
+
+/**
+ * Update department
+ */
+export const updateDepartment = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { name, description, head, status } = req.body;
+  const orgId = req.user.orgId;
+
+  const department = await prisma.department.findFirst({
+    where: { id, orgId }
+  });
+
+  if (!department) {
+    return errorResponse(res, 'Department not found', 404);
   }
 
   const updateData = {};
   if (name !== undefined) updateData.name = name;
   if (description !== undefined) updateData.description = description;
   if (head !== undefined) updateData.head = head;
+  if (status !== undefined) updateData.status = status;
 
-  const updated = await update('department', id, updateData, 'id');
+  const updated = await prisma.department.update({
+    where: { id },
+    data: updateData
+  });
 
-  return successResponse(res, 'Department updated successfully', updated)
-})
+  return successResponse(res, 'Department updated successfully', updated);
+});
 
 /**
- * Delete a department
+ * Delete department
  */
 export const deleteDepartment = asyncHandler(async (req, res) => {
-  const { id } = req.params
-  const orgId = req.user.orgId
+  const { id } = req.params;
+  const orgId = req.user.orgId;
 
-  const department = await findOne('department', { id, orgId });
+  const department = await prisma.department.findFirst({
+    where: { id, orgId }
+  });
 
   if (!department) {
-    return errorResponse(res, 'Department not found', 404)
+    return errorResponse(res, 'Department not found', 404);
   }
 
-  // Check if department has users
-  const userCount = await count('user', { departmentId: parseInt(id) });
+  await prisma.department.delete({
+    where: { id }
+  });
 
-  if (userCount > 0) {
-    return errorResponse(res, 'Cannot delete department with active users', 400)
+  return successResponse(res, 'Department deleted successfully');
+});
+
+/**
+ * Get employees in a department
+ */
+export const getDepartmentEmployees = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const orgId = req.user.orgId;
+
+  const department = await prisma.department.findFirst({
+    where: { id, orgId }
+  });
+
+  if (!department) {
+    return errorResponse(res, 'Department not found', 404);
   }
 
-  await deleteById('department', id, 'id');
+  const employees = await prisma.user.findMany({
+    where: {
+      orgId,
+      departmentId: id
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      role: { select: { name: true } }
+    }
+  });
 
-  return successResponse(res, 'Department deleted successfully', null)
-})
+  return successResponse(res, 'Department employees retrieved successfully', {
+    department,
+    employees
+  });
+});
+
+// Alias for getDepartmentById
+export const getDepartment = getDepartmentById;

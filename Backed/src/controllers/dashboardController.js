@@ -1,77 +1,224 @@
-import { count, findMany } from '../config/supabaseMapper.js'
+import prisma from '../config/prisma.js';
+import { successResponse, errorResponse } from '../utils/response.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 
-export const orgDashboard = async (req, res) => {
-  try {
-    const orgId = req.user.orgId
+/**
+ * Get organization dashboard analytics
+ */
+export const orgDashboard = asyncHandler(async (req, res) => {
+  const orgId = req.user.orgId;
 
-    // Get total active users in organization
-    const totalUsers = await count('user', { orgId, status: 'ACTIVE' })
-
-    // Get total departments
-    const totalDepartments = await count('department', { orgId, status: 'ACTIVE' })
-
-    // Get total shifts (NOTE: Shift table may not exist in new schema)
-    let totalShifts = 0
-    try {
-      totalShifts = await count('shift', { orgId, status: 'Active' })
-    } catch (error) {
-      console.warn('Shift query failed - shift table may not exist in schema')
-    }
-
-    // Get today's attendance
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-
-    // Fetch all attendance records for today (client-side filtering due to date complexity)
-    const todayAttendances = await findMany('attendance', { orgId }, { limit: 10000 })
-    const todayRecords = todayAttendances.filter(record => {
-      const recordDate = new Date(record.checkInTime || record.createdAt)
-      recordDate.setHours(0, 0, 0, 0)
-      return recordDate.getTime() === today.getTime()
-    })
-
-    // Get yesterday's attendance for comparison
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
-    
-    const yesterdayAttendances = await findMany('attendance', { orgId }, { limit: 10000 })
-    const yesterdayRecords = yesterdayAttendances.filter(record => {
-      const recordDate = new Date(record.checkInTime || record.createdAt)
-      recordDate.setHours(0, 0, 0, 0)
-      return recordDate.getTime() === yesterday.getTime()
-    })
-
-    // Map status codes to counts (assuming statusId 1=Present, 2=Absent, 3=Late)
-    const presentToday = todayRecords.filter(r => r.statusId === 1).length
-    const absentToday = todayRecords.filter(r => r.statusId === 2).length
-    const lateToday = todayRecords.filter(r => r.statusId === 3).length
-
-    const presentYesterday = yesterdayRecords.filter(r => r.statusId === 1).length
-    const absentYesterday = yesterdayRecords.filter(r => r.statusId === 2).length
-
-    const presentChange = presentToday - presentYesterday
-    const absentChange = absentToday - absentYesterday
-
-    res.json({
-      success: true,
-      data: {
-        totalUsers,
-        totalDepartments,
-        totalShifts,
-        presentToday,
-        absentToday,
-        lateToday,
-        presentChange,
-        absentChange
-      }
-    })
-  } catch (error) {
-    console.error('Dashboard error:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch dashboard analytics'
-    })
+  if (!orgId) {
+    return errorResponse(res, 'Organization not found', 400);
   }
-}
+
+  // Get total active users in organization
+  const totalUsers = await prisma.user.count({
+    where: { orgId, status: 'ACTIVE' }
+  });
+
+  // Get total departments
+  const totalDepartments = await prisma.department.count({
+    where: { orgId, status: 'Active' }
+  });
+
+  // Get total shifts
+  const totalShifts = await prisma.shift.count({
+    where: { orgId }
+  });
+
+  // Get today's attendance
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  // Get yesterday's attendance
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStart = new Date(yesterday);
+  yesterdayStart.setHours(0, 0, 0, 0);
+
+  // Query today's attendance records
+  const todayAttendances = await prisma.attendance.findMany({
+    where: {
+      orgId,
+      date: {
+        gte: today,
+        lt: tomorrow
+      }
+    }
+  });
+
+  // Query yesterday's attendance records
+  const yesterdayAttendances = await prisma.attendance.findMany({
+    where: {
+      orgId,
+      date: {
+        gte: yesterdayStart,
+        lt: today
+      }
+    }
+  });
+
+  // Count by status for today
+  const presentToday = todayAttendances.filter(r => r.status === 'Present').length;
+  const absentToday = todayAttendances.filter(r => r.status === 'Absent').length;
+  const lateToday = todayAttendances.filter(r => r.status === 'Late').length;
+
+  // Count by status for yesterday
+  const presentYesterday = yesterdayAttendances.filter(r => r.status === 'Present').length;
+  const absentYesterday = yesterdayAttendances.filter(r => r.status === 'Absent').length;
+
+  const presentChange = presentToday - presentYesterday;
+  const absentChange = absentToday - absentYesterday;
+
+  return successResponse(res, 'Dashboard metrics fetched', {
+    totalUsers,
+    totalDepartments,
+    totalShifts,
+    presentToday,
+    absentToday,
+    lateToday,
+    presentChange,
+    absentChange
+  });
+});
+
+/**
+ * Get organization dashboard with full attendance summary
+ */
+export const getDashboardData = asyncHandler(async (req, res) => {
+  const orgId = req.user.orgId;
+
+  if (!orgId) {
+    return errorResponse(res, 'Organization not found', 400);
+  }
+
+  // Get KPI metrics
+  const totalUsers = await prisma.user.count({
+    where: { orgId, status: 'ACTIVE' }
+  });
+
+  const totalDepartments = await prisma.department.count({
+    where: { orgId, status: 'Active' }
+  });
+
+  const totalShifts = await prisma.shift.count({
+    where: { orgId }
+  });
+
+  // Get today's attendance
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const todayAttendance = await prisma.attendance.findMany({
+    where: {
+      orgId,
+      date: {
+        gte: today,
+        lt: tomorrow
+      }
+    }
+  });
+
+  const presentToday = todayAttendance.filter(r => r.status === 'Present').length;
+  const absentToday = todayAttendance.filter(r => r.status === 'Absent').length;
+  const lateToday = todayAttendance.filter(r => r.status === 'Late').length;
+  const onLeaveToday = todayAttendance.filter(r => r.status === 'On_Leave').length;
+
+  // Get last 7 days attendance summary for chart
+  const last7Days = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    
+    const dayStart = new Date(date);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(date);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    const dayAttendance = await prisma.attendance.findMany({
+      where: {
+        orgId,
+        date: {
+          gte: dayStart,
+          lte: dayEnd
+        }
+      }
+    });
+
+    last7Days.push({
+      date: date.toISOString().split('T')[0],
+      present: dayAttendance.filter(r => r.status === 'Present').length,
+      absent: dayAttendance.filter(r => r.status === 'Absent').length,
+      late: dayAttendance.filter(r => r.status === 'Late').length
+    });
+  }
+
+  return successResponse(res, 'Dashboard data fetched', {
+    kpis: {
+      totalUsers,
+      totalDepartments,
+      totalShifts,
+      presentToday,
+      absentToday,
+      lateToday,
+      onLeaveToday
+    },
+    attendance: {
+      today: {
+        present: presentToday,
+        absent: absentToday,
+        late: lateToday,
+        onLeave: onLeaveToday
+      },
+      last7Days
+    }
+  });
+});
+
+/**
+ * Get attendance trend data
+ */
+export const getAttendanceTrend = asyncHandler(async (req, res) => {
+  const orgId = req.user.orgId;
+  const { days = 30 } = req.query;
+
+  if (!orgId) {
+    return errorResponse(res, 'Organization not found', 400);
+  }
+
+  const trend = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (let i = parseInt(days) - 1; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    
+    const dayStart = new Date(date);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(date);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    const count = await prisma.attendance.count({
+      where: {
+        orgId,
+        date: {
+          gte: dayStart,
+          lte: dayEnd
+        }
+      }
+    });
+
+    trend.push({
+      date: date.toISOString().split('T')[0],
+      count
+    });
+  }
+
+  return successResponse(res, 'Attendance trend data fetched', { trend });
+});

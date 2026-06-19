@@ -34,14 +34,10 @@ export async function getDashboardOverview(req, res) {
     const [
       orgsCount,
       usersCount,
-      activeSubscriptionsCount,
       attendanceCount
     ] = await Promise.all([
       prisma.organization.count(),
       prisma.user.count(),
-      prisma.organizationSubscription.count({
-        where: { status: 'ACTIVE' }
-      }),
       prisma.attendance.count()
     ]);
 
@@ -112,9 +108,6 @@ export async function getDashboardOverview(req, res) {
         total: usersCount,
         byStatus: userStatusMap,
         recentCount: recentUsersCount
-      },
-      subscriptions: {
-        activePaid: activeSubscriptionsCount
       },
       attendance: {
         total: attendanceCount,
@@ -427,147 +420,32 @@ export async function getOrganizationDetails(req, res) {
   try {
     const { id } = req.params;
 
-    const { data: org, error: orgError } = await supabase
-      .from('Organization')
-      .select('*')
-      .eq('Org_ID', id)
-      .single();
+    const org = await prisma.organization.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { 
+            users: true,
+            attendances: true
+          }
+        }
+      }
+    });
 
-    if (orgError) throw orgError;
     if (!org) {
       return errorResponse(res, 'Organization not found', null, 404);
     }
 
-    // Get organization users count
-    const { count: usersCount } = await supabase
-      .from('User')
-      .select('*', { count: 'exact', head: true })
-      .eq('Org_ID', id);
-
-    // Get organization devices count
-    const { count: devicesCount } = await supabase
-      .from('Device')
-      .select('*', { count: 'exact', head: true });
-
-    // Get subscription info
-    const { data: subscription } = await supabase
-      .from('OrganizationSubscription')
-      .select('*')
-      .eq('Org_ID', id)
-      .single();
-
-    // Get attendance count
-    const { count: attendanceCount } = await supabase
-      .from('Attendance')
-      .select('*', { count: 'exact', head: true })
-      .eq('Org_ID', id);
-
     return successResponse(res, 'Organization details fetched', {
       ...org,
       stats: {
-        users: usersCount || 0,
-        devices: devicesCount || 0,
-        attendanceRecords: attendanceCount || 0,
-        subscription: subscription || null
+        users: org._count.users || 0,
+        attendanceRecords: org._count.attendances || 0
       }
     });
   } catch (error) {
     console.log('Error in getOrganizationDetails:', error.message);
     return errorResponse(res, 'Failed to fetch organization details: ' + error.message, 500);
-  }
-}
-
-/**
- * ============================================================================
- * SUBSCRIPTION PLAN MANAGEMENT
- * ============================================================================
- */
-
-/**
- * GET /api/superadmin/subscription-plans
- * Get all subscription plans
- */
-export async function getSubscriptionPlans(req, res) {
-  try {
-    const { data, error } = await supabase
-      .from('SubscriptionPlan')
-      .select('*')
-      .order('Price', { ascending: true });
-
-    if (error) throw error;
-
-    return successResponse(res, 'Subscription plans fetched', data || []);
-  } catch (error) {
-    console.log('Error in getSubscriptionPlans:', error.message);
-    return errorResponse(res, 'Failed to fetch subscription plans: ' + error.message, 500);
-  }
-}
-
-/**
- * POST /api/superadmin/subscription-plans
- * Create subscription plan
- */
-export async function createSubscriptionPlan(req, res) {
-  try {
-    const {
-      Plan_Name,
-      Description,
-      Price,
-      Billing_Cycle,
-      MaxUsers,
-      Features
-    } = req.body;
-
-    if (!Plan_Name || Price === undefined) {
-      return errorResponse(res, 'Missing required fields: Plan_Name, Price', null, 400);
-    }
-
-    const { data, error } = await supabase
-      .from('SubscriptionPlan')
-      .insert([{
-        Plan_Name,
-        Description,
-        Price,
-        Billing_Cycle: Billing_Cycle || 'MONTHLY',
-        MaxUsers: MaxUsers || 0,
-        Features: Features || [],
-        CreatedAt: new Date().toISOString()
-      }])
-      .select();
-
-    if (error) throw error;
-
-    return successResponse(res, 'Subscription plan created', data[0], 201);
-  } catch (error) {
-    console.log('Error in createSubscriptionPlan:', error.message);
-    return errorResponse(res, 'Failed to create subscription plan: ' + error.message, 500);
-  }
-}
-
-/**
- * PUT /api/superadmin/subscription-plans/:id
- * Update subscription plan
- */
-export async function updateSubscriptionPlan(req, res) {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
-
-    const { data, error } = await supabase
-      .from('SubscriptionPlan')
-      .update({ ...updateData, UpdatedAt: new Date().toISOString() })
-      .eq('Plan_ID', id)
-      .select();
-
-    if (error) throw error;
-    if (!data || data.length === 0) {
-      return errorResponse(res, 'Subscription plan not found', null, 404);
-    }
-
-    return successResponse(res, 'Subscription plan updated', data[0]);
-  } catch (error) {
-    console.log('Error in updateSubscriptionPlan:', error.message);
-    return errorResponse(res, 'Failed to update subscription plan: ' + error.message, 500);
   }
 }
 
@@ -1066,11 +944,6 @@ export default {
   createOrganization,
   updateOrganization,
   getOrganizationDetails,
-  
-  // Subscription Management
-  getSubscriptionPlans,
-  createSubscriptionPlan,
-  updateSubscriptionPlan,
   
   // System Monitoring
   getSystemAuditLogs,

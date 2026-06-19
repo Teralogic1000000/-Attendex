@@ -6,9 +6,7 @@ import prisma from '../src/config/prisma.js'
 export async function setupTestDB() {
   try {
     // Clear existing data in reverse dependency order
-    await prisma.organizationSubscription.deleteMany({})
     await prisma.attendance.deleteMany({})
-    await prisma.subscriptionPlan.deleteMany({})
     await prisma.user.deleteMany({})
     await prisma.role.deleteMany({})
     await prisma.organization.deleteMany({})
@@ -22,43 +20,6 @@ export async function setupTestDB() {
 
     for (const role of roles) {
       await prisma.role.create({ data: role })
-    }
-
-    // Create subscription plans
-    const plans = [
-      {
-        name: 'Basic',
-        maxEmployees: 5,
-        maxAttendanceRecords: 1000,
-        price: 0,
-        interval: 'monthly',
-        features: ['Basic Attendance', '5 Employees'],
-      },
-      {
-        name: 'Pro',
-        maxEmployees: 50,
-        maxAttendanceRecords: 5000,
-        price: 9900,
-        interval: 'monthly',
-        features: ['Advanced Attendance', 'Reports', '50 Employees'],
-      },
-      {
-        name: 'Enterprise',
-        maxEmployees: 1000,
-        maxAttendanceRecords: 50000,
-        price: 49900,
-        interval: 'monthly',
-        features: ['All Features', 'Custom Support', '1000 Employees'],
-      },
-    ]
-
-    for (const plan of plans) {
-      await prisma.subscriptionPlan.create({
-        data: {
-          ...plan,
-          features: JSON.stringify(plan.features),
-        },
-      })
     }
 
     // Create test organization
@@ -87,25 +48,7 @@ export async function setupTestDB() {
       },
     })
 
-    // Create test subscription
-    const basicPlan = await prisma.subscriptionPlan.findUnique({
-      where: { name: 'Basic' },
-    })
-
-    const endDate = new Date()
-    endDate.setDate(endDate.getDate() + 30)
-
-    const subscription = await prisma.organizationSubscription.create({
-      data: {
-        orgId: org.id,
-        planId: basicPlan.id,
-        startDate: new Date(),
-        endDate,
-        status: 'ACTIVE',
-      },
-    })
-
-    return { org, admin, subscription }
+    return { org, admin }
   } catch (err) {
     console.error('Test DB setup failed:', err)
     throw err
@@ -117,12 +60,10 @@ export async function setupTestDB() {
  */
 export async function cleanupTestDB() {
   try {
-    await prisma.organizationSubscription.deleteMany({})
     await prisma.attendance.deleteMany({})
     await prisma.user.deleteMany({})
     await prisma.role.deleteMany({})
     await prisma.organization.deleteMany({})
-    await prisma.subscriptionPlan.deleteMany({})
   } catch (err) {
     console.error('Test DB cleanup failed:', err)
   }

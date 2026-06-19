@@ -19,7 +19,7 @@ const verifyToken = asyncHandler(async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
     // Fetch complete user data with role information
-    const user = await prisma.User.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: decoded.id },
       include: {
         role: true
@@ -47,7 +47,7 @@ const verifyToken = asyncHandler(async (req, res, next) => {
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({ message: "Invalid token" });
     }
-    if (error.name === 'TokenExpiredError') {
+        if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ message: "Token expired" });
     }
     return res.status(500).json({ message: "Token verification failed" });

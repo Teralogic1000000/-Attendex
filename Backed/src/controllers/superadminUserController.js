@@ -3,292 +3,437 @@
  * Handles user management across all organizations
  */
 
-import { findMany, findOne, count, update, create, deleteById } from '../config/supabaseMapper.js'
-import bcrypt from 'bcrypt'
-import { successResponse, errorResponse } from '../utils/response.js'
-import { asyncHandler } from '../utils/asyncHandler.js'
+import prisma from '../config/prisma.js';
+import bcrypt from 'bcrypt';
+import { successResponse, errorResponse } from '../utils/response.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 
 /**
- * GET /api/superadmin/users
  * List all users with pagination
  */
 export const getAllUsers = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, status = 'ACTIVE', role, search } = req.query
-  const skip = (page - 1) * limit
+  const { page = 1, limit = 10, status = 'ACTIVE', role, search } = req.query;
+  const skip = (page - 1) * limit;
 
-  // Fetch all users with client-side filtering
-  const allUsers = await findMany('user', {}, { limit: 100000 })
-  let filtered = allUsers
-
+  const where = {};
+  
   if (status) {
-    filtered = filtered.filter(u => u.status === status)
+    where.status = status;
   }
   if (role) {
-    filtered = filtered.filter(u => u.userTypeId === parseInt(role))
+    where.role = { name: role };
   }
   if (search) {
-    const searchLower = search.toLowerCase()
-    filtered = filtered.filter(u =>
-      u.firstName?.toLowerCase().includes(searchLower) ||
-      u.surname?.toLowerCase().includes(searchLower) ||
-      u.email?.toLowerCase().includes(searchLower)
-    )
+    where.OR = [
+      { firstName: { contains: search, mode: 'insensitive' } },
+      { lastName: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } }
+    ];
   }
 
-  const total = filtered.length
-  const users = filtered.slice(skip, skip + parseInt(limit))
+  const [users, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      include: { organization: true, role: true },
+      skip,
+      take: parseInt(limit),
+      orderBy: { createdAt: 'desc' }
+    }),
+    prisma.user.count({ where })
+  ]);
 
-  // Enrich with organization details
-  const enriched = await Promise.all(
-    users.map(async (user) => {
-      const [org, userType] = await Promise.all([
-        findOne('organization', { id: user.orgId }),
-        findOne('user_type', { id: user.userTypeId })
-      ])
+  const enriched = users.map(user => ({
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    phone: user.phone,
+    status: user.status,
+    role: user.role.name,
+    organization: user.organization ? {
+      id: user.organization.id,
+      name: user.organization.name
+    } : null,
+    createdAt: user.createdAt,
+    lastLogin: user.lastLogin
+  }));
 
-      return {
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.surname,
-        email: user.email,
-        status: user.status,
-        userType: userType?.typeName || 'Unknown',
-        organization: org ? { id: org.id, name: org.orgName } : null,
-        lastLogin: user.lastLogin,
-        createdAt: user.createdAt
-      }
-    })
-  )
-
-  return successResponse(res, 'Users fetched', {
+  return successResponse(res, 'Users retrieved', {
     data: enriched,
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),
       total,
-      pages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total / limit)
     }
-  })
-})
+  });
+});
 
 /**
- * GET /api/superadmin/users/:id
- * Get user details
+ * Get user detail
  */
 export const getUserDetail = asyncHandler(async (req, res) => {
-  const { id } = req.params
+  const { userId } = req.params;
 
-  const user = await findOne('user', { id })
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { organization: true, role: true, department: true }
+  });
 
   if (!user) {
-    return errorResponse(res, 'User not found', 404)
+    return errorResponse(res, 'User not found', 404);
   }
 
-  // Fetch related data
-  const [org, userType, recentAttendances] = await Promise.all([
-    findOne('organization', { id: user.orgId }),
-    findOne('user_type', { id: user.userTypeId }),
-    findMany('attendance', { userId: id }, { limit: 5 })
-  ])
+  // Get recent attendance records
+  const recentAttendance = await prisma.attendance.findMany({
+    where: { userId },
+    orderBy: { date: 'desc' },
+    take: 5
+  });
 
-  const userDetail = {
+  return successResponse(res, 'User detail fetched', {
     id: user.id,
     firstName: user.firstName,
-    lastName: user.surname,
+    lastName: user.lastName,
     email: user.email,
-    phone: user.phoneNum,
+    phone: user.phone,
     position: user.position,
-    department: user.department,
     status: user.status,
-    lastLogin: user.lastLogin,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-    userType: userType?.typeName || 'Unknown',
-    organization: org ? {
-      id: org.id,
-      name: org.orgName,
-      email: org.email,
-      status: org.status
+    role: user.role.name,
+    department: user.department ? { id: user.department.id, name: user.department.name } : null,
+    organization: user.organization ? {
+      id: user.organization.id,
+      name: user.organization.name
     } : null,
-    attendance: recentAttendances
-  }
-
-  return successResponse(res, 'User details fetched', userDetail)
-})
+    createdAt: user.createdAt,
+    lastLogin: user.lastLogin,
+    recentAttendance
+  });
+});
 
 /**
- * POST /api/superadmin/users/:id/disable
  * Disable user
  */
 export const disableUser = asyncHandler(async (req, res) => {
-  const { id } = req.params
-  const { reason } = req.body
+  const { userId } = req.params;
+  const { reason } = req.body;
 
-  const user = await findOne('user', { id })
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  
   if (!user) {
-    return errorResponse(res, 'User not found', 404)
+    return errorResponse(res, 'User not found', 404);
   }
 
   if (user.status === 'DISABLED') {
-    return errorResponse(res, 'User is already disabled', 400)
+    return errorResponse(res, 'User is already disabled', 400);
   }
 
-  const disabled = await update('user', id, { status: 'DISABLED' })
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { status: 'DISABLED' },
+    include: { role: true }
+  });
 
-  // Log action
-  await create('audit_log', {
-    action: 'DISABLE_USER',
-    resource: 'User',
-    resourceId: id,
-    userId: req.user.id,
-    orgId: user.orgId,
-    reason: reason || 'No reason provided',
-    ipAddress: req.ip
-  }).catch(err => console.warn('Audit log creation failed:', err))
+  // Log audit action
+  try {
+    await prisma.auditLog.create({
+      data: {
+        action: 'DISABLE_USER',
+        resource: 'User',
+        resourceId: userId,
+        userId: req.user.id,
+        orgId: user.orgId,
+        description: `User disabled${reason ? ': ' + reason : ''}`
+      }
+    });
+  } catch (err) {
+    console.warn('Failed to log audit:', err);
+  }
 
-  return successResponse(res, 'User disabled', {
-    id: disabled.id,
-    email: disabled.email,
-    status: disabled.status
-  })
-})
+  return successResponse(res, 'User disabled successfully', {
+    id: updated.id,
+    email: updated.email,
+    status: updated.status
+  });
+});
 
 /**
- * POST /api/superadmin/users/:id/enable
  * Enable user
  */
 export const enableUser = asyncHandler(async (req, res) => {
-  const { id } = req.params
+  const { userId } = req.params;
 
-  const user = await findOne('user', { id })
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  
   if (!user) {
-    return errorResponse(res, 'User not found', 404)
+    return errorResponse(res, 'User not found', 404);
   }
 
-  if (user.status !== 'DISABLED') {
-    return errorResponse(res, 'Only disabled users can be enabled', 400)
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { status: 'ACTIVE' },
+    include: { role: true }
+  });
+
+  // Log audit action
+  try {
+    await prisma.auditLog.create({
+      data: {
+        action: 'ENABLE_USER',
+        resource: 'User',
+        resourceId: userId,
+        userId: req.user.id,
+        description: 'User enabled'
+      }
+    });
+  } catch (err) {
+    console.warn('Failed to log audit:', err);
   }
 
-  const enabled = await update('user', id, { status: 'ACTIVE' })
-
-  // Log action
-  await create('audit_log', {
-    action: 'ENABLE_USER',
-    resource: 'User',
-    resourceId: id,
-    userId: req.user.id,
-    orgId: user.orgId,
-    reason: 'User re-enabled',
-    ipAddress: req.ip
-  }).catch(err => console.warn('Audit log creation failed:', err))
-
-  return successResponse(res, 'User enabled', {
-    id: enabled.id,
-    email: enabled.email,
-    status: enabled.status
-  })
-})
+  return successResponse(res, 'User enabled successfully', {
+    id: updated.id,
+    email: updated.email,
+    status: updated.status
+  });
+});
 
 /**
- * POST /api/superadmin/users/:id/reset-password
- * Reset user password (SuperAdmin generated temporary password)
+ * Reset user password
  */
 export const resetUserPassword = asyncHandler(async (req, res) => {
-  const { id } = req.params
+  const { userId } = req.params;
+  const { newPassword } = req.body;
 
-  const user = await findOne('user', { id })
-  if (!user) {
-    return errorResponse(res, 'User not found', 404)
+  if (!newPassword) {
+    return errorResponse(res, 'New password is required', 400);
   }
 
-  // Generate temporary password
-  const tempPassword = Math.random().toString(36).slice(-12)
-  const hashedPassword = await bcrypt.hash(tempPassword, 10)
+  if (newPassword.length < 8) {
+    return errorResponse(res, 'Password must be at least 8 characters', 400);
+  }
 
-  const updated = await update('user', id, { password: hashedPassword })
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  
+  if (!user) {
+    return errorResponse(res, 'User not found', 404);
+  }
 
-  // Log action
-  await create('audit_log', {
-    action: 'RESET_PASSWORD',
-    resource: 'User',
-    resourceId: id,
-    userId: req.user.id,
-    orgId: user.orgId,
-    reason: 'Password reset by SuperAdmin',
-    ipAddress: req.ip
-  }).catch(err => console.warn('Audit log creation failed:', err))
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { password: hashedPassword }
+  });
+
+  // Log audit action
+  try {
+    await prisma.auditLog.create({
+      data: {
+        action: 'RESET_PASSWORD',
+        resource: 'User',
+        resourceId: userId,
+        userId: req.user.id,
+        description: 'User password reset'
+      }
+    });
+  } catch (err) {
+    console.warn('Failed to log audit:', err);
+  }
 
   return successResponse(res, 'Password reset successfully', {
-    email: updated.email,
-    tempPassword, // Should be sent via email in production
-    message: 'Temporary password has been generated. User should change it on next login.'
-  })
-})
+    id: updated.id,
+    email: updated.email
+  });
+});
 
 /**
- * POST /api/superadmin/users/:orgId
- * Create user in specific organization
+ * Create user in organization
  */
 export const createUserInOrg = asyncHandler(async (req, res) => {
-  const { orgId } = req.params
-  const { firstName, lastName, email, password, role, position, department } = req.body
+  const { firstName, lastName, email, password, roleId, orgId, position, phone } = req.body;
 
-  // Validate required fields
-  if (!firstName || !lastName || !email || !password || !role) {
-    return errorResponse(res, 'First name, last name, email, password, and role are required', 400)
+  if (!firstName || !lastName || !email || !password || !orgId) {
+    return errorResponse(res, 'Required fields missing', 400);
   }
 
-  // Check org exists
-  const org = await findOne('organization', { id: orgId })
-  if (!org) {
-    return errorResponse(res, 'Organization not found', 404)
-  }
+  const existingUser = await prisma.user.findUnique({
+    where: { email }
+  });
 
-  // Check email uniqueness
-  const existingUser = await findOne('user', { email })
   if (existingUser) {
-    return errorResponse(res, 'Email already in use', 400)
+    return errorResponse(res, 'Email already in use', 400);
   }
 
-  // Get user type by name (assuming role is passed as type name)
-  const userType = await findOne('user_type', { typeName: role })
-  if (!userType) {
-    return errorResponse(res, 'User type not found', 404)
+  // Verify organization exists
+  const org = await prisma.organization.findUnique({
+    where: { id: orgId }
+  });
+
+  if (!org) {
+    return errorResponse(res, 'Organization not found', 404);
   }
 
-  // Hash password
-  const hashedPassword = await bcrypt.hash(password, 10)
+  const hashedPassword = await bcrypt.hash(password, 10);
 
-  const user = await create('user', {
-    firstName,
-    surname: lastName,
-    email,
-    password: hashedPassword,
-    orgId,
-    userTypeId: userType.id,
-    position,
-    department,
-    status: 'ACTIVE'
-  })
+  // Get default Employee role if not provided
+  let role = null;
+  if (roleId) {
+    role = await prisma.role.findUnique({ where: { id: roleId } });
+  } else {
+    role = await prisma.role.findFirst({ where: { name: 'Employee' } });
+  }
 
-  // Log action
-  await create('audit_log', {
-    action: 'CREATE_USER',
-    resource: 'User',
-    resourceId: user.id,
-    userId: req.user.id,
-    orgId,
-    reason: `Created user: ${email}`,
-    ipAddress: req.ip
-  }).catch(err => console.warn('Audit log creation failed:', err))
+  if (!role) {
+    return errorResponse(res, 'Invalid role', 400);
+  }
+
+  const user = await prisma.user.create({
+    data: {
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      position: position || '',
+      phone: phone || '',
+      orgId,
+      roleId: role.id,
+      status: 'ACTIVE'
+    },
+    include: { role: true, organization: true }
+  });
+
+  // Log audit action
+  try {
+    await prisma.auditLog.create({
+      data: {
+        action: 'CREATE_USER',
+        resource: 'User',
+        resourceId: user.id,
+        userId: req.user.id,
+        orgId,
+        description: `User created: ${email}`
+      }
+    });
+  } catch (err) {
+    console.warn('Failed to log audit:', err);
+  }
 
   return successResponse(res, 'User created successfully', {
     id: user.id,
     firstName: user.firstName,
-    lastName: user.surname,
+    lastName: user.lastName,
     email: user.email,
-    userType: role,
-    position: user.position,
-    department: user.department
-  }, 201)
-})
+    role: user.role.name,
+    organization: user.organization.name
+  }, 201);
+});
+
+/**
+ * Update user information
+ */
+export const updateUser = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const { firstName, lastName, phone, position, status, roleId } = req.body;
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  
+  if (!user) {
+    return errorResponse(res, 'User not found', 404);
+  }
+
+  const updateData = {};
+  if (firstName !== undefined) updateData.firstName = firstName;
+  if (lastName !== undefined) updateData.lastName = lastName;
+  if (phone !== undefined) updateData.phone = phone;
+  if (position !== undefined) updateData.position = position;
+  if (status !== undefined) updateData.status = status;
+  if (roleId !== undefined) updateData.roleId = roleId;
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: updateData,
+    include: { role: true }
+  });
+
+  // Log audit action
+  try {
+    await prisma.auditLog.create({
+      data: {
+        action: 'UPDATE_USER',
+        resource: 'User',
+        resourceId: userId,
+        userId: req.user.id,
+        description: `User updated: ${email}`
+      }
+    });
+  } catch (err) {
+    console.warn('Failed to log audit:', err);
+  }
+
+  return successResponse(res, 'User updated successfully', {
+    id: updated.id,
+    firstName: updated.firstName,
+    lastName: updated.lastName,
+    email: updated.email,
+    phone: updated.phone,
+    position: updated.position,
+    status: updated.status,
+    role: updated.role.name
+  });
+});
+
+/**
+ * Search users across organizations
+ */
+export const searchUsers = asyncHandler(async (req, res) => {
+  const { query, status, role, page = 1, limit = 10 } = req.query;
+  const skip = (page - 1) * limit;
+
+  const where = {};
+
+  if (query) {
+    where.OR = [
+      { firstName: { contains: query, mode: 'insensitive' } },
+      { lastName: { contains: query, mode: 'insensitive' } },
+      { email: { contains: query, mode: 'insensitive' } }
+    ];
+  }
+
+  if (status) {
+    where.status = status;
+  }
+
+  if (role) {
+    where.role = { name: role };
+  }
+
+  const [results, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      include: { organization: true, role: true },
+      skip,
+      take: parseInt(limit),
+      orderBy: { createdAt: 'desc' }
+    }),
+    prisma.user.count({ where })
+  ]);
+
+  return successResponse(res, 'Users found', {
+    data: results.map(u => ({
+      id: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      organization: u.organization?.name,
+      role: u.role?.name,
+      status: u.status,
+      createdAt: u.createdAt
+    })),
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  });
+});

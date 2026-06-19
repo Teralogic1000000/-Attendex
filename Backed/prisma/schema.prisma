@@ -3,31 +3,33 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model Organization {
-  id              String   @id @default(uuid())
-  name            String
-  email           String?
-  phone           String?
-  address         String?
-  industry        String?
-  size            String?
-  logoUrl         String?    // custom organization logo image URL
-  theme           Json?      // { primary: "#ff6600", secondary: "#000000", darkMode: Boolean }
-  status          String   @default("ACTIVE") // ACTIVE, SUSPENDED, DELETED
-  subscriptionId  String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @default(now()) @updatedAt
-  createdByUserId String?
+  id                   String   @id @default(uuid())
+  name                 String
+  email                String?
+  phone                String?
+  address              String?
+  industry             String?
+  size                 String?
+  logoUrl              String?    // custom organization logo image URL
+  theme                Json?      // { primary: "#ff6600", secondary: "#000000", darkMode: Boolean }
+  geofenceLatitude     Float?     // Geofence center latitude
+  geofenceLongitude    Float?     // Geofence center longitude
+  geofenceRadius       Float?     // Geofence radius in meters
+  status               String   @default("ACTIVE") // ACTIVE, SUSPENDED, DELETED
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @default(now()) @updatedAt
+  createdByUserId      String?
 
   users         User[]
   attendances   Attendance[]
   departments   Department[]
   shifts        Shift[]
-  subscription  OrganizationSubscription?
+  devices       Device[]
   auditLogs     AuditLog[] @relation("OrgAuditLogs")
 }
 
@@ -82,60 +84,66 @@ model User {
   organization  Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
   role          Role           @relation(fields: [roleId], references: [id])
   attendance    Attendance[]
+  devices       Device[]
   auditLogsMade AuditLog[]      @relation("UserAuditLogs")
 }
 
-model Attendance {
-  id         String   @id @default(uuid())
-  date       DateTime
-  checkIn    DateTime?
-  checkOut   DateTime?
-  totalHours Float?
-  status     String   @default("Present") // Present, Absent, Late, etc
-  ipAddress  String?
-  userId     String
-  orgId      String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now()) @updatedAt
+model Device {
+  id            String   @id @default(uuid())
+  userId        String
+  organizationId String
+  deviceId      String   @unique
+  deviceType    String   // e.g., "iPhone", "Android", "Web"
+  deviceModel   String?  // e.g., "iPhone 14", "Samsung S23"
+  osVersion     String?  // e.g., "iOS 17.2", "Android 14"
+  isTrusted     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
 
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  attendances   Attendance[]
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([deviceId])
+}
+
+model Attendance {
+  id            String   @id @default(uuid())
+  date          DateTime
+  checkIn       DateTime?
+  checkOut      DateTime?
+  totalHours    Float?
+  status        String   @default("Present") // Present, Absent, Late, On_Leave, Pending_Approval, Rejected
+  method        String?  // Face_Recognition, Biometric, QR_Code, RFID, Manual, Mobile_App, Geofence
+  ipAddress     String?
+  latitude      Float?   // GPS latitude coordinate
+  longitude     Float?   // GPS longitude coordinate
+  deviceId      String?  // Device identifier for validation
+  deviceType    String?  // Device type (mobile, web, etc)
+  deviceModel   String?  // Device model
+  osVersion     String?  // Operating system version
+  appVersion    String?  // Application version
+  notes         String?  // Additional notes about attendance
+  userId        String
+  orgId         String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization  Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  device        Device?        @relation(fields: [deviceId], references: [id], onDelete: SetNull)
 
   @@unique([userId, date])
+  @@index([userId])
+  @@index([orgId])
+  @@index([deviceId])
+  @@index([date])
+  @@index([status])
 }
 
-model SubscriptionPlan {
-  id                    String   @id @default(uuid())
-  name                  String   @unique
-  description           String?
-  maxEmployees          Int      @default(10)
-  maxAttendanceRecords  Int      @default(1000)
-  price                 Int      @default(0) // In cents
-  credits               Int      @default(0)
-  interval              String   @default("monthly") // monthly, yearly
-  features              String[] // JSON array of features
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @default(now()) @updatedAt
 
-  subscriptions OrganizationSubscription[]
-}
-
-model OrganizationSubscription {
-  id                String   @id @default(uuid())
-  orgId             String   @unique
-  planId            String
-  status            String   @default("ACTIVE") // ACTIVE, OVERDUE, SUSPENDED, EXPIRED, CANCELLED
-  startDate         DateTime @default(now())
-  nextBillingDate   DateTime?
-  endDate           DateTime?
-  paymentStatus     String   @default("PENDING") // PENDING, PAID, FAILED, OVERDUE
-  cancellationDate  DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @default(now()) @updatedAt
-
-  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  plan         SubscriptionPlan @relation(fields: [planId], references: [id])
-}
 
 model AuditLog {
   id            String   @id @default(uuid())
@@ -177,4 +185,57 @@ model RefreshToken {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// Lookup Tables (Reference Data)
+model AttendanceStatus {
+  id        Int     @id @default(autoincrement())
+  name      String  @unique
+  createdAt DateTime @default(now())
+
+  @@map("Attendance_Status")
+}
+
+model AttendanceMethod {
+  id        Int     @id @default(autoincrement())
+  name      String  @unique
+  createdAt DateTime @default(now())
+
+  @@map("Attendance_Method")
+}
+
+model UserType {
+  id        Int     @id @default(autoincrement())
+  name      String  @unique
+  createdAt DateTime @default(now())
+
+  @@map("User_Type")
+}
+
+model OrgType {
+  id        Int     @id @default(autoincrement())
+  name      String  @unique
+  createdAt DateTime @default(now())
+
+  @@map("Org_Type")
+}
+
+model Region {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  countryCode String?
+  createdAt   DateTime @default(now())
+
+  @@map("Region")
+}
+
+model DeviceInfo {
+  id        Int     @id @default(autoincrement())
+  type      String?
+  model     String?
+  osVersion String?
+  appVersion String?
+  createdAt DateTime @default(now())
+
+  @@map("Device_Info")
 }

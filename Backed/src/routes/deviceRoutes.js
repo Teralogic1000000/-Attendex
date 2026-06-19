@@ -2,12 +2,14 @@ import express from 'express';
 import verifyToken from '../Middleware/authMiddleware.js';
 import authorizeRoles from '../Middleware/roleMiddleware.js';
 import {
-  getDevices,
+  registerDevice,
+  getUserDevices,
   getDeviceById,
-  createDevice,
-  updateDevice,
-  updateDeviceLastUsed,
+  trustDevice,
+  untrustDevice,
   deleteDevice,
+  getOrganizationDevices,
+  updateDeviceLastUsed,
   getDevicesByIP
 } from '../controllers/deviceController.js';
 
@@ -16,17 +18,26 @@ const router = express.Router();
 router.use(verifyToken);
 
 /**
- * GET /api/devices
- * Get all devices in organization
- * SuperAdmin can see all devices across all organizations
+ * POST /api/devices/register
+ * Register a device on login
+ * Body: { deviceId, deviceType, deviceModel?, osVersion?, appVersion? }
+ * Called right after successful login with device information
  */
-router.get('/', authorizeRoles('Super_Admin', 'Org_Admin'), getDevices);
+router.post('/register', registerDevice);
 
 /**
- * GET /api/devices/:id
- * Get device by ID
+ * GET /api/devices/my-devices
+ * Get all devices for the authenticated user
+ * Query: page=1, limit=10
  */
-router.get('/:id', getDeviceById);
+router.get('/my-devices', getUserDevices);
+
+/**
+ * GET /api/devices/org/all
+ * Get all devices in organization (Admin only)
+ * Query: page=1, limit=10, trusted=true|false
+ */
+router.get('/org/all', authorizeRoles('Org_Admin', 'Super_Admin'), getOrganizationDevices);
 
 /**
  * GET /api/devices/search/ip
@@ -36,18 +47,22 @@ router.get('/:id', getDeviceById);
 router.get('/search/ip', getDevicesByIP);
 
 /**
- * POST /api/devices
- * Create new device
- * Body: { deviceName, deviceModel?, osType?, osVersion?, ipAddress }
+ * GET /api/devices/:id
+ * Get device by ID
  */
-router.post('/', authorizeRoles('Org_Admin', 'Super_Admin'), createDevice);
+router.get('/:id', getDeviceById);
 
 /**
- * PUT /api/devices/:id
- * Update device information
- * Body: { deviceName?, deviceModel?, osType?, osVersion?, ipAddress? }
+ * PUT /api/devices/:id/trust
+ * Mark device as trusted
  */
-router.put('/:id', authorizeRoles('Org_Admin', 'Super_Admin'), updateDevice);
+router.put('/:id/trust', trustDevice);
+
+/**
+ * PUT /api/devices/:id/untrust
+ * Mark device as untrusted
+ */
+router.put('/:id/untrust', untrustDevice);
 
 /**
  * PUT /api/devices/:id/last-used
@@ -58,8 +73,8 @@ router.put('/:id/last-used', updateDeviceLastUsed);
 
 /**
  * DELETE /api/devices/:id
- * Delete device (must not be assigned to any user)
+ * Delete device
  */
-router.delete('/:id', authorizeRoles('Org_Admin', 'Super_Admin'), deleteDevice);
+router.delete('/:id', deleteDevice);
 
 export default router;

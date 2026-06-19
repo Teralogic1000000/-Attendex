@@ -265,10 +265,129 @@
         </form>
       </div>
     </div>
+
+    <!-- Live Data Sections -->
+    <div class="space-y-6">
+      <!-- Employees Section -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-semibold text-gray-900">Employees ({{ employeesList.length }})</h3>
+          <button @click="showAddEmployeeModal = true" class="flex items-center px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm">
+            <UserPlus class="w-4 h-4 mr-2" />
+            Add Employee
+          </button>
+        </div>
+        <div v-if="employeesList.length > 0" class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-2 text-left font-medium text-gray-700">Name</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-700">Email</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-700">Position</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-700">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="emp in employeesList.slice(0, 5)" :key="emp.id" class="border-t hover:bg-gray-50">
+                <td class="px-4 py-2">{{ emp.firstName }} {{ emp.lastName }}</td>
+                <td class="px-4 py-2">{{ emp.email }}</td>
+                <td class="px-4 py-2">{{ emp.position || '-' }}</td>
+                <td class="px-4 py-2">
+                  <span :class="['px-2 py-1 rounded-full text-xs font-medium', emp.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800']">
+                    {{ emp.status }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-else class="text-center py-8 text-gray-500">
+          No employees found
+        </div>
+      </div>
+
+      <!-- Departments Section -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Departments ({{ departmentsList.length }})</h3>
+        <div v-if="departmentsList.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div v-for="dept in departmentsList" :key="dept.id" class="border border-gray-200 rounded-lg p-4">
+            <h4 class="font-medium text-gray-900">{{ dept.name }}</h4>
+            <p class="text-sm text-gray-500 mt-1">{{ dept.description || 'No description' }}</p>
+            <p class="text-xs text-gray-500 mt-2">Head: {{ dept.head || 'Unassigned' }}</p>
+          </div>
+        </div>
+        <div v-else class="text-center py-8 text-gray-500">
+          No departments found
+        </div>
+      </div>
+
+      <!-- Attendance Records Section -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Attendance (Last {{ attendanceRecords.length }})</h3>
+        <div v-if="attendanceRecords.length > 0" class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-2 text-left font-medium text-gray-700">Employee</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-700">Status</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-700">Date/Time</th>
+                <th class="px-4 py-2 text-left font-medium text-gray-700">Hours</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="rec in attendanceRecords.slice(0, 10)" :key="rec.id" class="border-t hover:bg-gray-50">
+                <td class="px-4 py-2">{{ rec.user?.firstName }} {{ rec.user?.lastName }}</td>
+                <td class="px-4 py-2">
+                  <span :class="['px-2 py-1 rounded-full text-xs font-medium', 
+                    rec.status === 'Present' ? 'bg-green-100 text-green-800' :
+                    rec.status === 'Absent' ? 'bg-red-100 text-red-800' :
+                    rec.status === 'Late' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800']">
+                    {{ rec.status }}
+                  </span>
+                </td>
+                <td class="px-4 py-2">{{ new Date(rec.date).toLocaleString() }}</td>
+                <td class="px-4 py-2">{{ rec.totalHours || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-else class="text-center py-8 text-gray-500">
+          No attendance records found
+        </div>
+      </div>
+
+      <!-- Action Buttons Row -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <button @click="refreshDashboard" :disabled="loading" class="flex items-center justify-center px-4 py-3 bg-accent-600 text-white rounded-lg hover:bg-accent-700 disabled:bg-accent-400 font-medium">
+          <svg v-if="!loading" class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <svg v-else class="animate-spin w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Refresh Data
+        </button>
+        <button @click="generateReport" :disabled="loading" class="flex items-center justify-center px-4 py-3 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 disabled:bg-secondary-400 font-medium">
+          <FileText class="w-5 h-5 mr-2" />
+          Generate Report
+        </button>
+        <button @click="createQRCode" class="flex items-center justify-center px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">
+          <QrCode class="w-5 h-5 mr-2" />
+          Generate QR Code
+        </button>
+      </div>
+
+      <!-- Error Display -->
+      <div v-if="error" class="p-4 bg-danger-50 border border-danger-200 text-danger-700 rounded-lg">
+        {{ error }}
+      </div>
+    </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
 import { Bar, Line } from 'vue-chartjs'
 import {
   Chart as ChartJS,
@@ -450,23 +569,14 @@ const handleAddEmployee = async () => {
       lastName: newEmployee.value.lastName,
       email: newEmployee.value.email,
       phone: newEmployee.value.phone || null,
-      userType: 'Employee',
+      position: newEmployee.value.position || null,
     }
 
-    // Call backend to create employee
-    const response = await fetch('/api/auth/register/employee', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authStore.accessToken}`
-      },
-      body: JSON.stringify(employeeData)
-    })
+    // Call dashboard service to create employee
+    const response = await dashboardService.createEmployee(employeeData)
 
-    const result = await response.json()
-
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to add employee')
+    if (!response || response.error) {
+      throw new Error(response?.message || 'Failed to add employee')
     }
 
     // Show success and reset form
@@ -486,10 +596,9 @@ const handleAddEmployee = async () => {
     setTimeout(() => {
       showAddEmployeeModal.value = false
       employeeSuccess.value = ''
+      // Refresh dashboard data
+      window.location.reload()
     }, 2000)
-
-    // Refresh employee list
-    await userStore.fetchStats()
   } catch (error) {
     employeeError.value = error.message || 'An error occurred while adding the employee'
     console.error('Add employee error:', error)
@@ -498,68 +607,223 @@ const handleAddEmployee = async () => {
   }
 }
 
-const generateReport = () => {
-  console.log('Generating report...')
-  // TODO: Implement report generation
+// Data states for all components
+const employeesList = ref([])
+const departmentsList = ref([])
+const attendanceRecords = ref([])
+const loading = ref(false)
+const error = ref('')
+
+// Pagination and filtering
+const employeePage = ref(1)
+const employeeLimit = ref(10)
+const attendancePage = ref(1)
+const attendanceLimit = ref(10)
+const attendanceStatusFilter = ref('all')
+
+// Refresh interval ID
+let refreshIntervalId = null
+
+/**
+ * Fetch all dashboard data
+ */
+const fetchDashboardData = async () => {
+  try {
+    loading.value = true
+    error.value = ''
+
+    // Fetch all data in parallel
+    const [overview, analytics, realtime, empList, depts, attRecords] = await Promise.allSettled([
+      dashboardService.getOrgDashboardOverview(),
+      dashboardService.getOrgAnalytics(),
+      dashboardService.getRealTimeCheckins(),
+      dashboardService.getOrganizationUsers(1, 100),
+      dashboardService.getOrganizationDepartments(),
+      dashboardService.getOrganizationAttendance(1, 100),
+    ])
+
+    // Process overview statistics
+    if (overview.status === 'fulfilled' && overview.value?.data?.statistics) {
+      const stat = overview.value.data.statistics
+      stats.value.totalEmployees = stat.totalEmployees || 0
+      stats.value.presentToday = stat.presentToday || 0
+      stats.value.absentToday = stat.absentToday || 0
+      stats.value.lateCheckins = stat.lateToday || 0
+      stats.value.avgHours = stat.avgHoursToday || '0.0'
+    }
+
+    // Process analytics for weekly chart
+    if (analytics.status === 'fulfilled' && analytics.value?.weekly) {
+      chartData.value.labels = analytics.value.weekly.map((d) => {
+        const dt = new Date(d.date)
+        return dt.toLocaleDateString(undefined, { weekday: 'short' })
+      })
+      chartData.value.datasets[0].data = analytics.value.weekly.map((d) => d.attendanceCount || 0)
+    }
+
+    // Process real-time checkins for hourly chart
+    if (realtime.status === 'fulfilled' && realtime.value?.labels) {
+      realtimeChartData.value.labels = realtime.value.labels
+      realtimeChartData.value.datasets[0].data = realtime.value.data
+    }
+
+    // Process employee list
+    if (empList.status === 'fulfilled' && empList.value?.data?.users) {
+      employeesList.value = empList.value.data.users
+    }
+
+    // Process departments
+    if (depts.status === 'fulfilled' && depts.value?.data) {
+      departmentsList.value = depts.value.data
+    }
+
+    // Process attendance records
+    if (attRecords.status === 'fulfilled' && attRecords.value?.data?.attendance) {
+      attendanceRecords.value = attRecords.value.data.attendance
+    }
+
+    // Process recent activity
+    try {
+      const activity = await dashboardService.getRecentActivity(10)
+      if (Array.isArray(activity)) {
+        recentActivity.value = activity.map((item) => ({
+          text: `${item.user?.firstName || 'Employee'} ${item.user?.lastName || ''} - ${item.status}`,
+          time: timeAgo(new Date(item.time)),
+          dotColor: item.status === 'Present' ? 'bg-accent-500' : 'bg-danger-500',
+        }))
+      }
+    } catch (e) {
+      console.error('Failed to load recent activity:', e)
+    }
+
+    stats.value.planName = 'Free'
+    stats.value.planStatus = 'Active'
+    chartReady.value = true
+  } catch (err) {
+    console.error('Dashboard data loading error:', err)
+    error.value = 'Failed to load dashboard data'
+    chartReady.value = true
+  } finally {
+    loading.value = false
+  }
 }
 
+/**
+ * Refresh dashboard data every 30 seconds
+ */
+const startAutoRefresh = () => {
+  if (refreshIntervalId) clearInterval(refreshIntervalId)
+  refreshIntervalId = setInterval(() => {
+    fetchDashboardData()
+  }, 30000) // Refresh every 30 seconds
+}
+
+/**
+ * Manual refresh
+ */
+const refreshDashboard = async () => {
+  await fetchDashboardData()
+}
+
+/**
+ * Generate Attendance Report
+ */
+const generateReport = async () => {
+  try {
+    loading.value = true
+    const reportData = {
+      date: new Date().toLocaleDateString(),
+      totalEmployees: stats.value.totalEmployees,
+      presentToday: stats.value.presentToday,
+      absentToday: stats.value.absentToday,
+      lateToday: stats.value.lateCheckins,
+      departments: departmentsList.value,
+      attendanceRecords: attendanceRecords.value,
+    }
+
+    // Create CSV content
+    let csv = 'Attendance Report\n'
+    csv += `Generated: ${new Date().toLocaleString()}\n\n`
+    csv += `Total Employees,${stats.value.totalEmployees}\n`
+    csv += `Present Today,${stats.value.presentToday}\n`
+    csv += `Absent Today,${stats.value.absentToday}\n`
+    csv += `Late Today,${stats.value.lateCheckins}\n\n`
+    csv += 'Employee,Status,Date/Time\n'
+
+    attendanceRecords.value.forEach((rec) => {
+      csv += `"${rec.user?.firstName} ${rec.user?.lastName}","${rec.status}","${new Date(rec.date).toLocaleString()}"\n`
+    })
+
+    // Download CSV
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `attendance-report-${new Date().getTime()}.csv`
+    link.click()
+    window.URL.revokeObjectURL(url)
+
+    console.log('Report generated successfully')
+  } catch (e) {
+    console.error('Report generation error:', e)
+    error.value = 'Failed to generate report'
+  } finally {
+    loading.value = false
+  }
+}
+
+/**
+ * Create QR Code for check-in
+ */
 const createQRCode = () => {
-  console.log('Creating QR Code...')
-  // TODO: Implement QR code creation
+  try {
+    const orgId = authStore.user?.orgId
+    const qrData = {
+      type: 'attendance_checkin',
+      orgId: orgId,
+      timestamp: new Date().getTime(),
+    }
+
+    const qrText = JSON.stringify(qrData)
+    const encodedQR = encodeURIComponent(qrText)
+
+    // Using QR code API
+    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedQR}`
+
+    // Open in new window or download
+    window.open(qrImageUrl, '_blank')
+    console.log('QR Code created')
+  } catch (e) {
+    console.error('QR code creation error:', e)
+    error.value = 'Failed to create QR code'
+  }
 }
 
+/**
+ * Create Geofence
+ */
 const createGeofence = () => {
-  console.log('Creating geofence...')
-  // TODO: Implement geofence creation
+  try {
+    // TODO: Implement geofence creation with location input
+    console.log('Geofence creation modal should be opened')
+  } catch (e) {
+    console.error('Geofence creation error:', e)
+    error.value = 'Failed to create geofence'
+  }
 }
 
 onMounted(async () => {
-  try {
-    const [userStatsData, attendanceData] = await Promise.allSettled([
-      userStore.fetchStats(),
-      attendanceStore.fetchOrgAttendance(),
-    ])
+  // Initial load
+  await fetchDashboardData()
+  
+  // Start auto-refresh
+  startAutoRefresh()
+})
 
-    if (userStatsData.status === 'fulfilled' && userStatsData.value) {
-      stats.value.totalEmployees = userStatsData.value.totalEmployees || userStatsData.value.totalUsers || 0
-      stats.value.presentToday = userStatsData.value.presentToday || 0
-      stats.value.absentToday = (userStatsData.value.totalEmployees || 0) - (userStatsData.value.presentToday || 0)
-      stats.value.lateCheckins = userStatsData.value.lateCheckins || 0
-      stats.value.activeProjects = userStatsData.value.activeProjects || 0
-      stats.value.avgHours = userStatsData.value.avgHours || '0.0'
-    }
-
-    // All organizations have Free plan by default
-    stats.value.planName = 'Free'
-    stats.value.planStatus = 'Active'
-
-    // Populate recent activity from org attendance
-    if (attendanceStore.orgAttendance && attendanceStore.orgAttendance.length > 0) {
-      recentActivity.value = attendanceStore.orgAttendance.slice(0, 10).map((r) => ({
-        text: `${r.firstName || r.user_name || 'Employee'} ${r.checkOut || r.check_out ? 'checked out' : 'checked in'}`,
-        time: timeAgo(r.checkOut || r.check_out || r.checkIn || r.check_in),
-        dotColor: r.checkOut || r.check_out ? 'bg-danger-500' : 'bg-accent-500',
-      }))
-    }
-
-    // Load analytics from backend
-    try {
-      const analytics = await dashboardService.getOrgAnalytics()
-      if (analytics && analytics.weekly) {
-        chartData.value.labels = analytics.weekly.map((d) => {
-          const dt = new Date(d.date)
-          return dt.toLocaleDateString(undefined, { weekday: 'short' })
-        })
-        chartData.value.datasets[0].data = analytics.weekly.map((d) => d.attendanceCount)
-      }
-    } catch (e) {
-      console.error('Failed to load analytics:', e)
-    } finally {
-      chartReady.value = true
-    }
-  } catch (err) {
-    console.error('Dashboard data loading error:', err)
-    chartReady.value = true
+// Cleanup on unmount
+onBeforeUnmount(() => {
+  if (refreshIntervalId) {
+    clearInterval(refreshIntervalId)
   }
 })
 </script>

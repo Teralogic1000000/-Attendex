@@ -24,11 +24,6 @@ import {
   updateOrganization,
   getOrganizationDetails,
   
-  // Subscription Management
-  getSubscriptionPlans,
-  createSubscriptionPlan,
-  updateSubscriptionPlan,
-  
   // System Monitoring
   getSystemAuditLogs,
   getSystemActivity,
@@ -180,40 +175,6 @@ router.get('/organizations/:id', getOrganizationDetails);
  * Body: Any organization fields to update
  */
 router.put('/organizations/:id', updateOrganization);
-
-/**
- * ============================================================================
- * SUBSCRIPTION PLAN MANAGEMENT
- * ============================================================================
- */
-
-/**
- * GET /api/superadmin/subscription-plans
- * Get all subscription plans
- */
-router.get('/subscription-plans', getSubscriptionPlans);
-
-/**
- * POST /api/superadmin/subscription-plans
- * Create new subscription plan
- * 
- * Body:
- * - Plan_Name: Plan name (required)
- * - Price: Plan price (required)
- * - Description: Plan description
- * - Billing_Cycle: MONTHLY or YEARLY (default: MONTHLY)
- * - MaxUsers: Maximum users allowed
- * - Features: Array of plan features
- */
-router.post('/subscription-plans', createSubscriptionPlan);
-
-/**
- * PUT /api/superadmin/subscription-plans/:id
- * Update subscription plan
- * 
- * Body: Any plan fields to update
- */
-router.put('/subscription-plans/:id', updateSubscriptionPlan);
 
 /**
  * ============================================================================

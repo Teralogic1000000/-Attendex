@@ -1,131 +1,147 @@
 // Backed/src/controllers/employeeDashboardController.js
 
-import supabase from '../config/supabaseClient.js';
-import { validateAttendance, validateUser, validateDevice, validateGeofence } from '../services/attendanceValidationService.js';
-
-/**
- * Standardized success response
- */
-const successResponse = (res, message, data, statusCode = 200) => {
-  return res.status(statusCode).json({
-    success: true,
-    message,
-    data,
-    timestamp: new Date().toISOString(),
-  });
-};
-
-/**
- * Standardized error response
- */
-const errorResponse = (res, message, error, statusCode = 500) => {
-  return res.status(statusCode).json({
-    success: false,
-    message,
-    error,
-    timestamp: new Date().toISOString(),
-  });
-};
+import prisma from '../config/prisma.js';
+import { successResponse, errorResponse } from '../utils/response.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 
 /**
  * Get employee dashboard overview
- * Returns: personal info, department, assigned device, today's attendance status
+ * Returns: personal info, department, today's attendance status
  */
-export async function getEmployeeDashboardOverview(req, res) {
-  try {
-    const userId = req.user.id;
+export const getEmployeeDashboardOverview = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
 
-    // Get user profile with organization
-    const { data: userProfile, error: userError } = await supabase
-      .from('user_full_view')
-      .select('User_ID, First_Name, Last_Name, Email, Phone, user_type_name, Department_ID, Device_ID, Organization_ID, Status')
-      .eq('User_ID', userId)
-      .single();
-
-    if (userError || !userProfile) {
-      return errorResponse(res, 'User profile not found', null, 404);
+  // Get user profile with organization and role
+  const userProfile = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { 
+      organization: true,
+      role: true
     }
+  });
 
-    if (userProfile.Status !== 'Active') {
-      return errorResponse(res, 'User account is inactive', null, 403);
-    }
-
-    // Get department information
-    let departmentInfo = null;
-    if (userProfile.Department_ID) {
-      const { data: dept } = await supabase
-        .from('department_full_view')
-        .select('Department_ID, Dept_Name, Description, Manager_ID')
-        .eq('Department_ID', userProfile.Department_ID)
-        .single();
-      departmentInfo = dept;
-    }
-
-    // Get assigned device information
-    let deviceInfo = null;
-    if (userProfile.Device_ID) {
-      const { data: device } = await supabase
-        .from('Device')
-        .select('Device_ID, Device_MAC, Device_Model, Device_Type, Status, Last_Sync')
-        .eq('Device_ID', userProfile.Device_ID)
-        .single();
-      deviceInfo = device;
-    }
-
-    // Get organization information
-    const { data: orgInfo } = await supabase
-      .from('organization_full_view')
-      .select('Organization_ID, Org_Name, Org_Email, Org_Phone, Org_Address, Org_Type, Region, Status')
-      .eq('Organization_ID', userProfile.Organization_ID)
-      .single();
-
-    // Get today's attendance status
-    const today = new Date().toISOString().split('T')[0];
-    const { data: todayAttendance } = await supabase
-      .from('Attendance')
-      .select('Attendance_ID, Check_In_Time, Check_Out_Time, Status')
-      .eq('User_ID', userId)
-      .gte('Check_In_Time', `${today}T00:00:00`)
-      .lt('Check_In_Time', `${today}T23:59:59`)
-      .single();
-
-    const dashboardData = {
-      profile: {
-        userId: userProfile.User_ID,
-        name: `${userProfile.First_Name} ${userProfile.Last_Name}`,
-        email: userProfile.Email,
-        phone: userProfile.Phone,
-        role: userProfile.user_type_name,
-        status: userProfile.Status,
-      },
-      department: departmentInfo,
-      device: deviceInfo,
-      organization: orgInfo
-        ? {
-            id: orgInfo.Organization_ID,
-            name: orgInfo.Org_Name,
-            email: orgInfo.Org_Email,
-            phone: orgInfo.Org_Phone,
-            address: orgInfo.Org_Address,
-            type: orgInfo.Org_Type,
-            region: orgInfo.Region,
-          }
-        : null,
-      todayAttendance: {
-        checkedIn: todayAttendance ? todayAttendance.Check_In_Time !== null : false,
-        checkedOut: todayAttendance ? todayAttendance.Check_Out_Time !== null : false,
-        status: todayAttendance?.Status || 'Not Marked',
-        checkInTime: todayAttendance?.Check_In_Time || null,
-        checkOutTime: todayAttendance?.Check_Out_Time || null,
-      },
-    };
-
-    return successResponse(res, 'Dashboard overview retrieved successfully', dashboardData);
-  } catch (error) {
-    console.error('Error fetching dashboard overview:', error);
-    return errorResponse(res, 'Failed to retrieve dashboard overview', error.message, 500);
+  if (!userProfile) {
+    return errorResponse(res, 'User profile not found', null, 404);
   }
-}
+
+  if (userProfile.status !== 'ACTIVE') {
+    return errorResponse(res, 'User account is inactive', null, 403);
+  }
+
+  // Get today's attendance status
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const todayAttendance = await prisma.attendance.findFirst({
+    where: {
+      userId,
+      date: {
+        gte: today,
+        lt: tomorrow
+      }
+    }
+  });
+
+  const dashboardData = {
+    profile: {
+      userId: userProfile.id,
+      name: `${userProfile.firstName} ${userProfile.lastName}`,
+      email: userProfile.email,
+      phone: userProfile.phone,
+      position: userProfile.position,
+      role: userProfile.role.name,
+      status: userProfile.status,
+    },
+    organization: userProfile.organization ? {
+      id: userProfile.organization.id,
+      name: userProfile.organization.name,
+      email: userProfile.organization.email,
+      phone: userProfile.organization.phone,
+    } : null,
+    todayAttendance: todayAttendance ? {
+      id: todayAttendance.id,
+      checkIn: todayAttendance.checkIn,
+      checkOut: todayAttendance.checkOut,
+      status: todayAttendance.status,
+      totalHours: todayAttendance.totalHours
+    } : null
+  };
+
+  return successResponse(res, 'Employee dashboard overview fetched', dashboardData);
+});
+
+/**
+ * Get employee attendance history
+ */
+export const getEmployeeAttendanceHistory = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const { days = 30 } = req.query;
+
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - parseInt(days));
+  startDate.setHours(0, 0, 0, 0);
+
+  const attendance = await prisma.attendance.findMany({
+    where: {
+      userId,
+      date: {
+        gte: startDate
+      }
+    },
+    orderBy: { date: 'desc' },
+    take: 100
+  });
+
+  return successResponse(res, 'Attendance history fetched', {
+    records: attendance,
+    count: attendance.length
+  });
+});
+
+/**
+ * Get employee statistics
+ */
+export const getEmployeeStats = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const { month } = req.query;
+
+  const startDate = new Date();
+  if (month) {
+    const [year, monthNum] = month.split('-');
+    startDate.setFullYear(parseInt(year), parseInt(monthNum) - 1, 1);
+  } else {
+    startDate.setMonth(startDate.getMonth());
+    startDate.setDate(1);
+  }
+  startDate.setHours(0, 0, 0, 0);
+
+  const endDate = new Date(startDate);
+  endDate.setMonth(endDate.getMonth() + 1);
+
+  const attendance = await prisma.attendance.findMany({
+    where: {
+      userId,
+      date: {
+        gte: startDate,
+        lt: endDate
+      }
+    }
+  });
+
+  const stats = {
+    totalRecords: attendance.length,
+    present: attendance.filter(a => a.status === 'Present').length,
+    absent: attendance.filter(a => a.status === 'Absent').length,
+    late: attendance.filter(a => a.status === 'Late').length,
+    onLeave: attendance.filter(a => a.status === 'On_Leave').length,
+    pendingApproval: attendance.filter(a => a.status === 'Pending_Approval').length,
+    rejected: attendance.filter(a => a.status === 'Rejected').length
+  };
+
+  return successResponse(res, 'Employee statistics fetched', stats);
+});
 
 /**
  * Get employee profile (limited information - no sensitive data)

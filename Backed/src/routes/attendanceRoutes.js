@@ -1,5 +1,6 @@
 import express from 'express';
 import verifyToken from '../Middleware/authMiddleware.js';
+import { validateDevice } from '../Middleware/deviceValidationMiddleware.js';
 import { authorizeRoles, checkPermission } from '../Middleware/rbacMiddleware.js';
 import {
   checkIn,
@@ -26,13 +27,18 @@ router.use(verifyToken);
 
 // POST /attendance/checkin
 // Check in to mark presence (Employee, Contractor, Intern)
+// Required headers: x-device-id
+// Required body: latitude, longitude, deviceId, deviceType, deviceModel?, osVersion?, appVersion?
 router.post('/checkin', 
   authorizeRoles('Super_Admin', 'Org_Admin', 'Employee', 'Contractor', 'Intern'),
+  validateDevice,
   checkIn
 );
 
 // POST /attendance/checkout
 // Check out to end shift (Employee, Contractor, Intern)
+// Required headers: x-device-id
+// Optional body: latitude, longitude (for location verification)
 router.post('/checkout',
   authorizeRoles('Super_Admin', 'Org_Admin', 'Employee', 'Contractor', 'Intern'),
   checkOut
