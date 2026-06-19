@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id                   String   @id @default(uuid())
+  name                 String
+  email                String?
+  phone                String?
+  address              String?
+  industry             String?
+  size                 String?
+  logoUrl              String?    // custom organization logo image URL
+  theme                Json?      // { primary: "#ff6600", secondary: "#000000", darkMode: Boolean }
+  geofenceLatitude     Float?     // Geofence center latitude
+  geofenceLongitude    Float?     // Geofence center longitude
+  geofenceRadius       Float?     // Geofence radius in meters
+  status               String   @default("ACTIVE") // ACTIVE, SUSPENDED, DELETED
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @default(now()) @updatedAt
+  createdByUserId      String?
+
+  users         User[]
+  attendances   Attendance[]
+  departments   Department[]
+  shifts        Shift[]
+  devices       Device[]
+  auditLogs     AuditLog[] @relation("OrgAuditLogs")
+}
+
+model Department {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  head          String?
+  status        String   @default("ACTIVE")
+  orgId         String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  organization  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model Shift {
+  id            String   @id @default(uuid())
+  name          String
+  startTime     String    // HH:mm format
+  endTime       String    // HH:mm format
+  status        String   @default("Active") // Active, Inactive
+  orgId         String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  organization  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model Role {
+  id    String @id @default(uuid())
+  name  String @unique
+  users User[]
+}
+
+model User {
+  id            String   @id @default(uuid())
+  firstName     String
+  lastName      String
+  email         String   @unique
+  password      String
+  phone         String?
+  position      String?
+  orgId         String?
+  roleId        String
+  status        String   @default("ACTIVE") // ACTIVE, DISABLED, DELETED
+  refreshToken  String?
+  lastLogin     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  organization  Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  role          Role           @relation(fields: [roleId], references: [id])
+  attendance    Attendance[]
+  devices       Device[]
+  auditLogsMade AuditLog[]      @relation("UserAuditLogs")
+}
+
+model Device {
+  id            String   @id @default(uuid())
+  userId        String
+  organizationId String
+  deviceId      String   @unique
+  deviceType    String   // e.g., "iPhone", "Android", "Web"
+  deviceModel   String?  // e.g., "iPhone 14", "Samsung S23"
+  osVersion     String?  // e.g., "iOS 17.2", "Android 14"
+  isTrusted     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  attendances   Attendance[]
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([deviceId])
+}
+
+model Attendance {
+  id            String   @id @default(uuid())
+  date          DateTime
+  checkIn       DateTime?
+  checkOut      DateTime?
+  totalHours    Float?
+  status        String   @default("Present") // Present, Absent, Late, On_Leave, Pending_Approval, Rejected
+  method        String?  // Face_Recognition, Biometric, QR_Code, RFID, Manual, Mobile_App, Geofence
+  ipAddress     String?
+  latitude      Float?   // GPS latitude coordinate
+  longitude     Float?   // GPS longitude coordinate
+  deviceId      String?  // Device identifier for validation
+  deviceType    String?  // Device type (mobile, web, etc)
+  deviceModel   String?  // Device model
+  osVersion     String?  // Operating system version
+  appVersion    String?  // Application version
+  notes         String?  // Additional notes about attendance
+  userId        String
+  orgId         String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization  Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  device        Device?        @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([orgId])
+  @@index([deviceId])
+  @@index([date])
+  @@index([status])
+}
+
+
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  action        String   // CREATE_ORG, DELETE_ORG, SUSPEND_ORG, UPDATE_USER, etc
+  resource      String   // User, Organization, Subscription, etc
+  resourceId    String   // ID of the resource changed
+  changes       String?  // JSON string of what changed
+  reason        String?  // Why the action was taken
+  ipAddress     String?
+  userAgent     String?
+  orgId         String?
+  createdAt     DateTime @default(now())
+
+  user          User?        @relation("UserAuditLogs", fields: [userId], references: [id], onDelete: SetNull)
+  userId        String?
+  organization  Organization? @relation("OrgAuditLogs", fields: [orgId], references: [id], onDelete: SetNull)
+
+  @@index([action])
+  @@index([resourceId])
+  @@index([orgId])
+  @@index([userId])
+}
+
+model SystemSettings {
+  id            String   @id @default(uuid())
+  key           String   @unique
+  value         String
+  dataType      String   @default("string") // string, number, boolean, json
+  description   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Lookup Tables (Reference Data)
+model AttendanceStatus {
+  id        Int     @id @default(autoincrement())
+  name      String  @unique
+  createdAt DateTime @default(now())
+
+  @@map("Attendance_Status")
+}
+
+model AttendanceMethod {
+  id        Int     @id @default(autoincrement())
+  name      String  @unique
+  createdAt DateTime @default(now())
+
+  @@map("Attendance_Method")
+}
+
+model UserType {
+  id        Int     @id @default(autoincrement())
+  name      String  @unique
+  createdAt DateTime @default(now())
+
+  @@map("User_Type")
+}
+
+model OrgType {
+  id        Int     @id @default(autoincrement())
+  name      String  @unique
+  createdAt DateTime @default(now())
+
+  @@map("Org_Type")
+}
+
+model Region {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  countryCode String?
+  createdAt   DateTime @default(now())
+
+  @@map("Region")
+}
+
+model DeviceInfo {
+  id        Int     @id @default(autoincrement())
+  type      String?
+  model     String?
+  osVersion String?
+  appVersion String?
+  createdAt DateTime @default(now())
+
+  @@map("Device_Info")
+}

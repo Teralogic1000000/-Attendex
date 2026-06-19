@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-white text-slate-900 font-sans;
+  }
+
+  /* Ensure router-link elements are clickable and have proper cursor */
+  a, router-link, [role="button"] {
+    pointer-events: auto;
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-orange-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center rounded-lg bg-danger-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-danger-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-accent {
+    @apply inline-flex items-center justify-center rounded-lg bg-accent-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .input-field {
+    @apply block w-full rounded-lg border-0 py-2.5 px-3.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 text-sm leading-6;
+  }
+
+  .label-text {
+    @apply block text-sm font-medium leading-6 text-slate-900;
+  }
+
+  .card {
+    @apply bg-white rounded-xl shadow-sm ring-1 ring-slate-950/5;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold tracking-tight text-slate-900;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-slate-500 mt-1;
+  }
+
+  .table-header {
+    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500;
+  }
+
+  .table-cell {
+    @apply px-4 py-3.5 text-sm text-slate-700;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+}
